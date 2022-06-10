@@ -4,14 +4,14 @@ camera_name: hk_right
 camera_matrix:
   rows: 3
   cols: 3
-  data: [1781.74415,    0.     ,  721.01267,
-            0.     , 1781.80511,  520.28177,
+  data: [1802.98196,    0.     ,  722.4003 ,
+            0.     , 1801.2397 ,  533.82024,
             0.     ,    0.     ,    1.     ]
 distortion_model: plumb_bob
 distortion_coefficients:
   rows: 1
   cols: 5
-  data: [-0.070227, 0.073725, -0.000842, -0.000318, 0.000000]
+  data: [-0.077961, 0.090236, -0.000110, -0.000304, 0.000000]
 rectification_matrix:
   rows: 3
   cols: 3
@@ -21,6 +21,6 @@ rectification_matrix:
 projection_matrix:
   rows: 3
   cols: 4
-  data: [1763.28357,    0.     ,  720.24009,    0.     ,
-            0.     , 1769.53247,  519.16789,    0.     ,
+  data: [1783.17188,    0.     ,  721.66578,    0.     ,
+            0.     , 1788.14014,  533.20097,    0.     ,
             0.     ,    0.     ,    1.     ,    0.     ]

@@ -105,6 +105,14 @@ void HKCameraNodelet::onInit()
   assert(MV_CC_SetIntValue(dev_handle_,"Height",image_height_) == MV_OK);
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetX",image_offset_x_) == MV_OK);
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetY",image_offset_y_) == MV_OK);
+//    ROS_INFO("%x",MV_CC_SetBoolValue(dev_handle_,"AcquisitionLineRateEnable", false));
+//    ROS_INFO("%x",MV_CC_SetIntValue(dev_handle_,"ResultingLineRate",100));
+//  _MVCC_FLOATVALUE_T a;
+//  _MVCC_INTVALUE_T b;
+//  assert(MV_CC_GetFloatValue(dev_handle_,"ResultingFrameRate",&a) == MV_OK);
+//    ROS_INFO("%x\n",MV_CC_GetIntValue(dev_handle_,"ResultingLineRate",&b));
+//  ROS_INFO("%f\n",a.fCurValue);
+//    ROS_INFO("%d\n",b.nCurValue);
 //  assert(MV_CC_SetEnumValue(dev_handle_,"BalanceWhiteAuto",MV_BALANCEWHITE_AUTO_CONTINUOUS ) == MV_OK);
 
   if (enable_imu_trigger_)
@@ -136,7 +144,7 @@ void HKCameraNodelet::onInit()
     device_open_ = true;
   }
 
-  ros::NodeHandle p_nh(nh_, "hk_camera_dy");
+  ros::NodeHandle p_nh(nh_, "hk_camera_reconfig");
   srv_ = new dynamic_reconfigure::Server<CameraConfig>(p_nh);
   dynamic_reconfigure::Server<CameraConfig>::CallbackType cb =
       boost::bind(&HKCameraNodelet::reconfigCB, this, _1, _2);
