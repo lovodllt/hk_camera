@@ -29,6 +29,7 @@ void HKCameraNodelet::onInit()
   nh_.param("pixel_format", pixel_format_, std::string("bgr8"));
   nh_.param("frame_id", frame_id_, std::string("camera_optical_frame"));
   nh_.param("camera_sn", camera_sn_, std::string(""));
+  nh_.param("frame_rate", frame_rate_, 70);
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
   // check for default camera info
@@ -54,8 +55,7 @@ void HKCameraNodelet::onInit()
 
   MV_CC_DEVICE_INFO_LIST stDeviceList;
   memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
-  assert(MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE , &stDeviceList) == MV_OK);  // Initializes the library.
-  uint32_t device_num = 0;
+  assert(MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE , &stDeviceList) == MV_OK);
   assert(stDeviceList.nDeviceNum > 0);
 
   // Opens the device.
@@ -79,7 +79,7 @@ void HKCameraNodelet::onInit()
   }
   else{
       assert(MV_CC_CreateHandle(&dev_handle_, stDeviceList.pDeviceInfo[nIndex]) == MV_OK);
-      MV_CC_OpenDevice(dev_handle_);
+      assert(MV_CC_OpenDevice(dev_handle_)==MV_OK);
   }
 
 
@@ -103,8 +103,12 @@ void HKCameraNodelet::onInit()
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetX",image_offset_x_) == MV_OK);
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetY",image_offset_y_) == MV_OK);
 //  AcquisitionLineRate ,LineRate ,FrameRate can't be set
-
-
+//  assert(MV_CC_SetBoolValue(dev_handle_,"AcquisitionLineRateEnable", true)== MV_OK);
+//  assert(MV_CC_SetIntValue(dev_handle_,"AcquisitionLineRate", 10)== MV_OK);
+  _MVCC_FLOATVALUE_T a;
+  MV_CC_SetFrameRate(dev_handle_,frame_rate_);
+  MV_CC_GetFrameRate(dev_handle_,&a);
+    ROS_INFO("Frame rate is: %f",a.fCurValue);
   MV_CC_RegisterImageCallBackEx(dev_handle_, onFrameCB, dev_handle_);
 
   if (MV_CC_StartGrabbing(dev_handle_) == MV_OK)
@@ -173,7 +177,7 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
     assert(MV_CC_SetFloatValue(dev_handle_,"AutoGainLowerLimit",config.gain_min)==MV_OK);
     MV_CC_SetFloatValue(dev_handle_,"AutoGainUpperLimit",config.gain_max);
     MV_CC_SetEnumValue(dev_handle_,"GainAuto",MV_GAIN_MODE_CONTINUOUS);
-    MV_CC_GetFloatValue(dev_handle_,"ExposureTime",&gain_value);
+    MV_CC_GetFloatValue(dev_handle_,"Gain",&gain_value);
     config.gain_value = gain_value.fCurValue;
   }
   else
@@ -211,6 +215,19 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
     assert(MV_CC_SetEnumValue(dev_handle_,"BalanceWhiteAuto",MV_BALANCEWHITE_AUTO_OFF ) == MV_OK);
     assert(MV_CC_GetIntValue(dev_handle_,"BalanceRatio",&white_value) == MV_OK);
     config.white_value = white_value.nCurValue;
+  }
+
+  if(config.gamma_enable) {
+      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true)==MV_OK);
+      assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_USER)==MV_OK);
+      MV_CC_GetGamma(dev_handle_, &gamma_value);
+      if(MV_CC_SetGamma(dev_handle_,config.gain_value)==MV_E_GC_RANGE)
+      {
+          MV_CC_SetGamma(dev_handle_,gamma_value.fCurValue);
+      }
+  }
+  else{
+      assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_SRGB)==MV_OK);
   }
 }
 
