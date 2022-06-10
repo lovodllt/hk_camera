@@ -29,8 +29,6 @@ void HKCameraNodelet::onInit()
   nh_.param("pixel_format", pixel_format_, std::string("bgr8"));
   nh_.param("frame_id", frame_id_, std::string("camera_optical_frame"));
   nh_.param("camera_sn", camera_sn_, std::string(""));
-  nh_.param("enable_imu_trigger", enable_imu_trigger_, true);
-  nh_.param("raising_filter_value", raising_filter_value_, 0);
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
   // check for default camera info
@@ -58,7 +56,6 @@ void HKCameraNodelet::onInit()
   memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
   assert(MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE , &stDeviceList) == MV_OK);  // Initializes the library.
   uint32_t device_num = 0;
-//  GXUpdateDeviceList(&device_num, 1000);
   assert(stDeviceList.nDeviceNum > 0);
 
   // Opens the device.
@@ -105,43 +102,14 @@ void HKCameraNodelet::onInit()
   assert(MV_CC_SetIntValue(dev_handle_,"Height",image_height_) == MV_OK);
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetX",image_offset_x_) == MV_OK);
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetY",image_offset_y_) == MV_OK);
-//    ROS_INFO("%x",MV_CC_SetBoolValue(dev_handle_,"AcquisitionLineRateEnable", false));
-//    ROS_INFO("%x",MV_CC_SetIntValue(dev_handle_,"ResultingLineRate",100));
-//  _MVCC_FLOATVALUE_T a;
-//  _MVCC_INTVALUE_T b;
-//  assert(MV_CC_GetFloatValue(dev_handle_,"ResultingFrameRate",&a) == MV_OK);
-//    ROS_INFO("%x\n",MV_CC_GetIntValue(dev_handle_,"ResultingLineRate",&b));
-//  ROS_INFO("%f\n",a.fCurValue);
-//    ROS_INFO("%d\n",b.nCurValue);
-//  assert(MV_CC_SetEnumValue(dev_handle_,"BalanceWhiteAuto",MV_BALANCEWHITE_AUTO_CONTINUOUS ) == MV_OK);
+//  AcquisitionLineRate ,LineRate ,FrameRate can't be set
 
-  if (enable_imu_trigger_)
-  {
-    assert(MV_CC_SetEnumValue(dev_handle_,"TriggerMode",MV_TRIGGER_MODE_ON ) == MV_OK);
-    assert(MV_CC_SetEnumValue(dev_handle_,"TriggerSource",MV_TRIGGER_SOURCE_LINE3 ) == MV_OK);
-//    didn't find the enum
-    assert(MV_CC_SetEnumValue(dev_handle_,"TriggerActivation",0 ) == MV_OK);
-//    didn't find the function
-//    assert(GXSetFloat(dev_handle_, GX_FLOAT_TRIGGER_FILTER_RAISING, raising_filter_value_) == GX_STATUS_SUCCESS);
-    assert(MV_CC_SetEnumValue(dev_handle_,"TLineSelector",3 ) == MV_OK);
-    assert(MV_CC_SetEnumValue(dev_handle_,"LineMode",0 ) == MV_OK);
-
-    trigger_sub_ = nh_.subscribe("/trigger_time", 50, &hk_camera::HKCameraNodelet::triggerCB, this);
-
-    imu_correspondence_service_ =
-        nh_.advertiseService("imu_camera_correspondece", hk_camera::HKCameraNodelet::imuCorrespondence);
-  }
-  else
-  {
-    assert(MV_CC_SetEnumValue(dev_handle_,"TriggerMode",MV_TRIGGER_MODE_OFF ) == MV_OK);
-  }
 
   MV_CC_RegisterImageCallBackEx(dev_handle_, onFrameCB, dev_handle_);
 
   if (MV_CC_StartGrabbing(dev_handle_) == MV_OK)
   {
     ROS_INFO("Stream On.");
-    device_open_ = true;
   }
 
   ros::NodeHandle p_nh(nh_, "hk_camera_reconfig");
@@ -151,67 +119,14 @@ void HKCameraNodelet::onInit()
   srv_->setCallback(cb);
 }
 
-bool HKCameraNodelet::imuCorrespondence(rm_msgs::CameraStatus::Request& req, rm_msgs::CameraStatus::Response& res)
-{
-  res.is_open = device_open_;
-  return true;
-}
-
-void HKCameraNodelet::triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref)
-{
-  hk_camera::TriggerPacket pkt;
-  pkt.trigger_time_ = time_ref->time_ref;
-  pkt.trigger_counter_ = time_ref->header.seq;
-  fifoWrite(pkt);
-}
-
-void HKCameraNodelet::fifoWrite(TriggerPacket pkt)
-{
-  if (fifo_front_ == (fifo_rear_ + 1) % FIFO_SIZE)
-  {
-    ROS_WARN("FIFO overflow!");
-    return;
-  }
-  fifo_[fifo_rear_] = pkt;
-  fifo_rear_ = (fifo_rear_ + 1) % FIFO_SIZE;
-}
-
-bool HKCameraNodelet::fifoRead(TriggerPacket& pkt)
-{
-  if (fifo_front_ == fifo_rear_)
-    return false;
-  pkt = fifo_[fifo_front_];
-  fifo_front_ = (fifo_front_ + 1) % FIFO_SIZE;
-  return true;
-}
 
 void HKCameraNodelet::onFrameCB(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser)
 {
   if (pFrameInfo)
   {
-    if (enable_imu_trigger_)
-    {
-      TriggerPacket pkt;
-      while (!fifoRead(pkt))
-      {
-        ros::Duration(0.001).sleep();
-      }
-      if (pkt.trigger_counter_ != receive_trigger_counter_++)
-        ROS_WARN("Trigger not in sync!");
-      else
-      {
-        image_.header.stamp = pkt.trigger_time_;
-        info_.header.stamp = pkt.trigger_time_;
-      }
-    }
-    else
-    {
-      ros::Time now = ros::Time::now();
-      //      delay_time = (now.sec + now.nsec * 1e-9) - (image_.header.stamp.sec + image_.header.stamp.nsec * 1e-9);
-      image_.header.stamp = now;
-      info_.header.stamp = now;
-    }
-
+    ros::Time now = ros::Time::now();
+    image_.header.stamp = now;
+    info_.header.stamp = now;
 
     MV_CC_PIXEL_CONVERT_PARAM stConvertParam = {0};
     // Top to bottom are：image width, image height, input data buffer, input data size, source pixel format,
@@ -270,21 +185,6 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
 
   // Black level
   // Can not be used!
-  if (config.black_auto)
-  {
-//    GXSetEnum(dev_handle_, GX_ENUM_BLACKLEVEL_AUTO, GX_BLACKLEVEL_AUTO_CONTINUOUS);
-//    GXGetFloat(dev_handle_, GX_FLOAT_BLACKLEVEL, &config.black_value);
-//    assert(MV_CC_SetBoolValue(dev_handle_,"BlackLevelEnable",0)==MV_OK);
-//    assert(MV_CC_SetFloatValue(dev_handle_,"BlackLevel",1000)==MV_OK);
-//    assert(MV_CC_SetBoolValue(dev_handle_,"BlackLevelEnable",1)==MV_OK);
-  }
-  else
-  {
-//    GXSetEnum(dev_handle_, GX_ENUM_BLACKLEVEL_AUTO, GX_BLACKLEVEL_AUTO_OFF);
-//    GXSetFloat(dev_handle_, GX_FLOAT_BLACKLEVEL, config.black_value);
-  }
-  // Balance White
-
   assert(MV_CC_SetEnumValue(dev_handle_,"BalanceWhiteAuto",MV_BALANCEWHITE_AUTO_OFF ) == MV_OK);
   switch (config.white_selector)
   {
@@ -298,11 +198,7 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
           assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",2)==MV_OK);
           break;
   }
-//  if (last_channel_ != config.white_selector)
-//  {
-//    GXGetFloat(dev_handle_, GX_FLOAT_BALANCE_RATIO, &config.white_value);
-//    last_channel_ = config.white_selector;
-//  }
+
     _MVCC_INTVALUE_T white_value;
   if (config.white_auto)
   {
@@ -324,17 +220,10 @@ HKCameraNodelet::~HKCameraNodelet()
   MV_CC_DestroyHandle(dev_handle_);
 }
 
-bool HKCameraNodelet::device_open_ = false;
 void* HKCameraNodelet::dev_handle_;
 unsigned char* HKCameraNodelet::img_;
 sensor_msgs::Image HKCameraNodelet::image_;
 image_transport::CameraPublisher HKCameraNodelet::pub_;
 sensor_msgs::CameraInfo HKCameraNodelet::info_;
-bool HKCameraNodelet::enable_imu_trigger_;
-const int HKCameraNodelet::FIFO_SIZE = 1023;
-int HKCameraNodelet::fifo_front_ = 0;
-int HKCameraNodelet::fifo_rear_ = 0;
-struct TriggerPacket HKCameraNodelet::fifo_[FIFO_SIZE];
-uint32_t HKCameraNodelet::receive_trigger_counter_ = 0;
 
 }  // namespace hk_camera
