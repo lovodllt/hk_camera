@@ -25,6 +25,7 @@ public:
 
   void onInit() override;
   static sensor_msgs::Image image_;
+  static sensor_msgs::Image image_rect;
 
 private:
   void reconfigCB(CameraConfig& config, uint32_t level);
@@ -34,11 +35,14 @@ private:
   dynamic_reconfigure::Server<CameraConfig>* srv_{};
 
   boost::shared_ptr<camera_info_manager::CameraInfoManager> info_manager_;
-  std::string camera_name_, camera_info_url_, pixel_format_, frame_id_, camera_sn_;
+  static  std::string camera_name_;
+  std::string camera_info_url_, pixel_format_, frame_id_, camera_sn_;
   int frame_rate_;
   int image_width_{}, image_height_{}, image_offset_x_{}, image_offset_y_{};
+  static int width_;
   static unsigned char* img_;
   static image_transport::CameraPublisher pub_;
+  static  ros::Publisher pub_rect_;
   static sensor_msgs::CameraInfo info_;
   static void __stdcall onFrameCB(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser);
 

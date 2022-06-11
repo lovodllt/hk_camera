@@ -14,6 +14,7 @@
         <param name="camera_frame_id" value="camera_right_optical_frame"/>
         <param name="camera_sn" value="00J67375789"/>
         <param name="frame_rate" value="160"/>
+        <remap from="/image_rect" to="/image_rect_right" />
     </node>
     <node pkg="nodelet" type="nodelet" name="vision_nodelet_left" args="manager"
           output="screen"/>
@@ -28,6 +29,7 @@
         <param name="camera_frame_id" value="camera_left_optical_frame"/>
         <param name="camera_sn" value="00K01829453"/>
         <param name="frame_rate" value="160"/>
+        <remap from="/image_rect" to="/image_rect_left" />
     </node>
 
 </launch>

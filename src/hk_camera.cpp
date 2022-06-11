@@ -5,6 +5,9 @@
 #include <hk_camera.h>
 #include <utility>
 #include <ros/time.h>
+#include <opencv2/opencv.hpp>
+#include <cv_bridge/cv_bridge.h>
+
 
 namespace hk_camera
 {
@@ -117,6 +120,7 @@ void HKCameraNodelet::onInit()
   }
 
   ros::NodeHandle p_nh(nh_, "hk_camera_reconfig");
+  pub_rect_ = p_nh.advertise<sensor_msgs::Image>("/image_rect",1);
   srv_ = new dynamic_reconfigure::Server<CameraConfig>(p_nh);
   dynamic_reconfigure::Server<CameraConfig>::CallbackType cb =
       boost::bind(&HKCameraNodelet::reconfigCB, this, _1, _2);
@@ -145,6 +149,24 @@ void HKCameraNodelet::onFrameCB(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFr
     stConvertParam.nDstBufferSize = pFrameInfo->nWidth * pFrameInfo->nHeight * 3;
     MV_CC_ConvertPixelType(dev_handle_, &stConvertParam);
     memcpy((char*)(&image_.data[0]), img_, image_.step * image_.height);
+    cv_bridge::CvImagePtr cv_ptr;
+    cv_ptr = cv_bridge::toCvCopy(image_, "bgr8");
+    cv::Mat cv_img;
+    cv_ptr->image.copyTo(cv_img);
+    sensor_msgs::ImagePtr image_rect_ptr;
+    if(strcmp(camera_name_.data(),"hk_right")){
+        cv::Rect rect(0,0,1440 - width_,1080);
+        cv_img = cv_img(rect);
+        image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(),"bgr8",cv_img).toImageMsg();
+        pub_rect_.publish(image_rect_ptr);
+    }
+    if(strcmp(camera_name_.data(),"hk_left")){
+        cv::Rect rect(width_,0,1440 - width_,1080);
+        cv_img = cv_img(rect);
+        image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(),"bgr8",cv_img).toImageMsg();
+        pub_rect_.publish(image_rect_ptr);
+    }
+
     pub_.publish(image_, info_);
   }
   else
@@ -231,6 +253,7 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
           assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
           break;
   }
+  width_ = config.width_offset;
 }
 
 HKCameraNodelet::~HKCameraNodelet()
@@ -242,7 +265,10 @@ HKCameraNodelet::~HKCameraNodelet()
 void* HKCameraNodelet::dev_handle_;
 unsigned char* HKCameraNodelet::img_;
 sensor_msgs::Image HKCameraNodelet::image_;
+sensor_msgs::Image HKCameraNodelet::image_rect;
 image_transport::CameraPublisher HKCameraNodelet::pub_;
+ros::Publisher HKCameraNodelet::pub_rect_;
 sensor_msgs::CameraInfo HKCameraNodelet::info_;
-
+int HKCameraNodelet::width_{};
+std::string HKCameraNodelet::camera_name_;
 }  // namespace hk_camera
