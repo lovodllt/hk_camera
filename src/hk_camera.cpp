@@ -158,7 +158,7 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   if (config.exposure_auto)
   {
     _MVCC_FLOATVALUE_T exposure_time;
-    assert(MV_CC_SetIntValue(dev_handle_,"AutoExposureTimeLowerLimit",config.exposure_min)==MV_OK);
+    assert(MV_CC_SetIntValue(dev_handle_,"AutoExposureTimeLowerLimit",config.exposure_min) == MV_OK);
     MV_CC_SetIntValue(dev_handle_,"AutoExposureTimeUpperLimit",config.exposure_max);
     MV_CC_SetEnumValue(dev_handle_,"ExposureAuto",MV_EXPOSURE_AUTO_MODE_CONTINUOUS);
     MV_CC_GetFloatValue(dev_handle_,"ExposureTime",&exposure_time);
@@ -167,14 +167,14 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   else
   {
     MV_CC_SetEnumValue(dev_handle_,"ExposureAuto",MV_EXPOSURE_AUTO_MODE_OFF);
-    assert(MV_CC_SetFloatValue(dev_handle_,"ExposureTime",config.exposure_value)==MV_OK);
+    assert(MV_CC_SetFloatValue(dev_handle_,"ExposureTime",config.exposure_value) == MV_OK);
   }
 
   // Gain
   if (config.gain_auto)
   {
     _MVCC_FLOATVALUE_T gain_value;
-    assert(MV_CC_SetFloatValue(dev_handle_,"AutoGainLowerLimit",config.gain_min)==MV_OK);
+    assert(MV_CC_SetFloatValue(dev_handle_,"AutoGainLowerLimit",config.gain_min) == MV_OK);
     MV_CC_SetFloatValue(dev_handle_,"AutoGainUpperLimit",config.gain_max);
     MV_CC_SetEnumValue(dev_handle_,"GainAuto",MV_GAIN_MODE_CONTINUOUS);
     MV_CC_GetFloatValue(dev_handle_,"Gain",&gain_value);
@@ -193,13 +193,13 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   switch (config.white_selector)
   {
       case 0:
-          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",0)==MV_OK);
+          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",0) == MV_OK);
           break;
       case 1:
-          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",1)==MV_OK);
+          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",1) == MV_OK);
           break;
       case 2:
-          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",2)==MV_OK);
+          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",2) == MV_OK);
           break;
   }
 
@@ -217,17 +217,19 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
     config.white_value = white_value.nCurValue;
   }
 
-  if(config.gamma_enable) {
-      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true)==MV_OK);
-      assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_USER)==MV_OK);
-      MV_CC_GetGamma(dev_handle_, &gamma_value);
-      if(MV_CC_SetGamma(dev_handle_,config.gain_value)==MV_E_GC_RANGE)
-      {
-          MV_CC_SetGamma(dev_handle_,gamma_value.fCurValue);
-      }
-  }
-  else{
-      assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_SRGB)==MV_OK);
+  switch (config.gamma_selector) {
+      case 0:
+          assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true) == MV_OK);
+          assert(MV_CC_SetEnumValue(dev_handle_,"GammaSelector",MV_GAMMA_SELECTOR_SRGB)==MV_OK);
+          break;
+      case 1:
+          assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true) == MV_OK);
+          assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_USER) == MV_OK);
+          assert(MV_CC_SetGamma(dev_handle_,config.gamma_value) == MV_OK);
+          break;
+      case 2:
+          assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
+          break;
   }
 }
 
