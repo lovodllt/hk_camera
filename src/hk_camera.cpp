@@ -105,13 +105,14 @@ void HKCameraNodelet::onInit()
   assert(MV_CC_SetIntValue(dev_handle_,"Height",image_height_) == MV_OK);
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetX",image_offset_x_) == MV_OK);
   assert(MV_CC_SetIntValue(dev_handle_,"OffsetY",image_offset_y_) == MV_OK);
-//  AcquisitionLineRate ,LineRate ,FrameRate can't be set
+//  AcquisitionLineRate ,LineRate can't be set
 //  assert(MV_CC_SetBoolValue(dev_handle_,"AcquisitionLineRateEnable", true)== MV_OK);
 //  assert(MV_CC_SetIntValue(dev_handle_,"AcquisitionLineRate", 10)== MV_OK);
-  _MVCC_FLOATVALUE_T a;
+
+  _MVCC_FLOATVALUE_T frame_rate;
   MV_CC_SetFrameRate(dev_handle_,frame_rate_);
-  MV_CC_GetFrameRate(dev_handle_,&a);
-    ROS_INFO("Frame rate is: %f",a.fCurValue);
+  MV_CC_GetFrameRate(dev_handle_,&frame_rate);
+    ROS_INFO("Frame rate is: %f",frame_rate.fCurValue);
   MV_CC_RegisterImageCallBackEx(dev_handle_, onFrameCB, dev_handle_);
 
   if (MV_CC_StartGrabbing(dev_handle_) == MV_OK)
