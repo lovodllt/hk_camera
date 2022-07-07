@@ -8,7 +8,6 @@
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 
-
 namespace hk_camera
 {
 PLUGINLIB_EXPORT_CLASS(hk_camera::HKCameraNodelet, nodelet::Nodelet)
@@ -33,6 +32,7 @@ void HKCameraNodelet::onInit()
   nh_.param("frame_id", frame_id_, std::string("camera_optical_frame"));
   nh_.param("camera_sn", camera_sn_, std::string(""));
   nh_.param("frame_rate", frame_rate_, 70);
+  nh_.param("sleep_time", sleep_time_, 0);
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
   // check for default camera info
@@ -58,33 +58,38 @@ void HKCameraNodelet::onInit()
 
   MV_CC_DEVICE_INFO_LIST stDeviceList;
   memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
-  assert(MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE , &stDeviceList) == MV_OK);
+  assert(MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE, &stDeviceList) == MV_OK);
   assert(stDeviceList.nDeviceNum > 0);
 
   // Opens the device.
   unsigned int nIndex = 0;
   MVCC_STRINGVALUE dev_sn;
   memset(&dev_sn, 0, sizeof(MVCC_STRINGVALUE));
-  if(stDeviceList.nDeviceNum > 1) {
-      for (; nIndex < stDeviceList.nDeviceNum; nIndex++) {
-          assert(MV_CC_CreateHandle(&dev_handle_, stDeviceList.pDeviceInfo[nIndex]) == MV_OK);
-          sleep(1);
-          MV_CC_OpenDevice(dev_handle_);
-          MV_CC_GetStringValue(dev_handle_, "DeviceSerialNumber", &dev_sn);
-          if (strcmp(dev_sn.chCurValue, (char *) camera_sn_.data()) == 0) {
-              break;
-          } else {
-              MV_CC_DestroyHandle(dev_handle_);
-              if (nIndex == stDeviceList.nDeviceNum - 1)
-                  ROS_INFO("The serial number is false!");
-          }
-      }
-  }
-  else{
+  ros::Duration(sleep_time_).sleep();
+  if (stDeviceList.nDeviceNum > 1)
+  {
+    for (; nIndex < stDeviceList.nDeviceNum; nIndex++)
+    {
       assert(MV_CC_CreateHandle(&dev_handle_, stDeviceList.pDeviceInfo[nIndex]) == MV_OK);
-      assert(MV_CC_OpenDevice(dev_handle_)==MV_OK);
+      MV_CC_OpenDevice(dev_handle_);
+      MV_CC_GetStringValue(dev_handle_, "DeviceSerialNumber", &dev_sn);
+      if (strcmp(dev_sn.chCurValue, (char*)camera_sn_.data()) == 0)
+      {
+        break;
+      }
+      else
+      {
+        MV_CC_DestroyHandle(dev_handle_);
+        if (nIndex == stDeviceList.nDeviceNum - 1)
+          ROS_INFO("The serial number is false!");
+      }
+    }
   }
-
+  else
+  {
+    assert(MV_CC_CreateHandle(&dev_handle_, stDeviceList.pDeviceInfo[nIndex]) == MV_OK);
+    assert(MV_CC_OpenDevice(dev_handle_) == MV_OK);
+  }
 
   MvGvspPixelType format;
   if (pixel_format_ == "mono8")
@@ -100,19 +105,19 @@ void HKCameraNodelet::onInit()
   if (format == 0)
     static_assert(true, "Illegal format");
 
-//  assert(MV_CC_SetEnumValue(dev_handle_,"PixelFormat",format) == MV_OK);
-  assert(MV_CC_SetIntValue(dev_handle_,"Width",image_width_) == MV_OK);
-  assert(MV_CC_SetIntValue(dev_handle_,"Height",image_height_) == MV_OK);
-  assert(MV_CC_SetIntValue(dev_handle_,"OffsetX",image_offset_x_) == MV_OK);
-  assert(MV_CC_SetIntValue(dev_handle_,"OffsetY",image_offset_y_) == MV_OK);
-//  AcquisitionLineRate ,LineRate can't be set
-//  assert(MV_CC_SetBoolValue(dev_handle_,"AcquisitionLineRateEnable", true)== MV_OK);
-//  assert(MV_CC_SetIntValue(dev_handle_,"AcquisitionLineRate", 10)== MV_OK);
+  //  assert(MV_CC_SetEnumValue(dev_handle_,"PixelFormat",format) == MV_OK);
+  assert(MV_CC_SetIntValue(dev_handle_, "Width", image_width_) == MV_OK);
+  assert(MV_CC_SetIntValue(dev_handle_, "Height", image_height_) == MV_OK);
+  assert(MV_CC_SetIntValue(dev_handle_, "OffsetX", image_offset_x_) == MV_OK);
+  assert(MV_CC_SetIntValue(dev_handle_, "OffsetY", image_offset_y_) == MV_OK);
+  //  AcquisitionLineRate ,LineRate can't be set
+  //  assert(MV_CC_SetBoolValue(dev_handle_,"AcquisitionLineRateEnable", true)== MV_OK);
+  //  assert(MV_CC_SetIntValue(dev_handle_,"AcquisitionLineRate", 10)== MV_OK);
 
   _MVCC_FLOATVALUE_T frame_rate;
-  MV_CC_SetFrameRate(dev_handle_,frame_rate_);
-  MV_CC_GetFrameRate(dev_handle_,&frame_rate);
-    ROS_INFO("Frame rate is: %f",frame_rate.fCurValue);
+  MV_CC_SetFrameRate(dev_handle_, frame_rate_);
+  MV_CC_GetFrameRate(dev_handle_, &frame_rate);
+  ROS_INFO("Frame rate is: %f", frame_rate.fCurValue);
   MV_CC_RegisterImageCallBackEx(dev_handle_, onFrameCB, dev_handle_);
 
   if (MV_CC_StartGrabbing(dev_handle_) == MV_OK)
@@ -121,15 +126,13 @@ void HKCameraNodelet::onInit()
   }
 
   ros::NodeHandle p_nh(nh_, "hk_camera_reconfig");
-  pub_rect_ = p_nh.advertise<sensor_msgs::Image>("/image_rect",1);
+  pub_rect_ = p_nh.advertise<sensor_msgs::Image>("/image_rect", 1);
   srv_ = new dynamic_reconfigure::Server<CameraConfig>(p_nh);
-  dynamic_reconfigure::Server<CameraConfig>::CallbackType cb =
-      boost::bind(&HKCameraNodelet::reconfigCB, this, _1, _2);
+  dynamic_reconfigure::Server<CameraConfig>::CallbackType cb = boost::bind(&HKCameraNodelet::reconfigCB, this, _1, _2);
   srv_->setCallback(cb);
 }
 
-
-void HKCameraNodelet::onFrameCB(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser)
+void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser)
 {
   if (pFrameInfo)
   {
@@ -137,7 +140,7 @@ void HKCameraNodelet::onFrameCB(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFr
     image_.header.stamp = now;
     info_.header.stamp = now;
 
-    MV_CC_PIXEL_CONVERT_PARAM stConvertParam = {0};
+    MV_CC_PIXEL_CONVERT_PARAM stConvertParam = { 0 };
     // Top to bottom are：image width, image height, input data buffer, input data size, source pixel format,
     // destination pixel format, output data buffer, provided output buffer size
     stConvertParam.nWidth = pFrameInfo->nWidth;
@@ -155,17 +158,19 @@ void HKCameraNodelet::onFrameCB(unsigned char * pData, MV_FRAME_OUT_INFO_EX* pFr
     cv::Mat cv_img;
     cv_ptr->image.copyTo(cv_img);
     sensor_msgs::ImagePtr image_rect_ptr;
-    if(strcmp(camera_name_.data(),"hk_right")){
-        cv::Rect rect(0,0,1440 - width_,1080);
-        cv_img = cv_img(rect);
-        image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(),"bgr8",cv_img).toImageMsg();
-        pub_rect_.publish(image_rect_ptr);
+    if (strcmp(camera_name_.data(), "hk_right"))
+    {
+      cv::Rect rect(0, 0, 1440 - width_, 1080);
+      cv_img = cv_img(rect);
+      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
+      pub_rect_.publish(image_rect_ptr);
     }
-    if(strcmp(camera_name_.data(),"hk_left")){
-        cv::Rect rect(width_,0,1440 - width_,1080);
-        cv_img = cv_img(rect);
-        image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(),"bgr8",cv_img).toImageMsg();
-        pub_rect_.publish(image_rect_ptr);
+    if (strcmp(camera_name_.data(), "hk_left"))
+    {
+      cv::Rect rect(width_, 0, 1440 - width_, 1080);
+      cv_img = cv_img(rect);
+      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
+      pub_rect_.publish(image_rect_ptr);
     }
 
     pub_.publish(image_, info_);
@@ -181,78 +186,78 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   if (config.exposure_auto)
   {
     _MVCC_FLOATVALUE_T exposure_time;
-    assert(MV_CC_SetIntValue(dev_handle_,"AutoExposureTimeLowerLimit",config.exposure_min) == MV_OK);
-    MV_CC_SetIntValue(dev_handle_,"AutoExposureTimeUpperLimit",config.exposure_max);
-    MV_CC_SetEnumValue(dev_handle_,"ExposureAuto",MV_EXPOSURE_AUTO_MODE_CONTINUOUS);
-    MV_CC_GetFloatValue(dev_handle_,"ExposureTime",&exposure_time);
+    assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min) == MV_OK);
+    MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeUpperLimit", config.exposure_max);
+    MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_CONTINUOUS);
+    MV_CC_GetFloatValue(dev_handle_, "ExposureTime", &exposure_time);
     config.exposure_value = exposure_time.fCurValue;
   }
   else
   {
-    MV_CC_SetEnumValue(dev_handle_,"ExposureAuto",MV_EXPOSURE_AUTO_MODE_OFF);
-    assert(MV_CC_SetFloatValue(dev_handle_,"ExposureTime",config.exposure_value) == MV_OK);
+    MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_OFF);
+    assert(MV_CC_SetFloatValue(dev_handle_, "ExposureTime", config.exposure_value) == MV_OK);
   }
 
   // Gain
   if (config.gain_auto)
   {
     _MVCC_FLOATVALUE_T gain_value;
-    assert(MV_CC_SetFloatValue(dev_handle_,"AutoGainLowerLimit",config.gain_min) == MV_OK);
-    MV_CC_SetFloatValue(dev_handle_,"AutoGainUpperLimit",config.gain_max);
-    MV_CC_SetEnumValue(dev_handle_,"GainAuto",MV_GAIN_MODE_CONTINUOUS);
-    MV_CC_GetFloatValue(dev_handle_,"Gain",&gain_value);
+    assert(MV_CC_SetFloatValue(dev_handle_, "AutoGainLowerLimit", config.gain_min) == MV_OK);
+    MV_CC_SetFloatValue(dev_handle_, "AutoGainUpperLimit", config.gain_max);
+    MV_CC_SetEnumValue(dev_handle_, "GainAuto", MV_GAIN_MODE_CONTINUOUS);
+    MV_CC_GetFloatValue(dev_handle_, "Gain", &gain_value);
     config.gain_value = gain_value.fCurValue;
   }
   else
   {
-    MV_CC_SetEnumValue(dev_handle_,"GainAuto",MV_GAIN_MODE_OFF);
-    MV_CC_SetFloatValue(dev_handle_,"Gain",config.gain_value);
-
+    MV_CC_SetEnumValue(dev_handle_, "GainAuto", MV_GAIN_MODE_OFF);
+    MV_CC_SetFloatValue(dev_handle_, "Gain", config.gain_value);
   }
 
   // Black level
   // Can not be used!
-  assert(MV_CC_SetEnumValue(dev_handle_,"BalanceWhiteAuto",MV_BALANCEWHITE_AUTO_OFF ) == MV_OK);
+  assert(MV_CC_SetEnumValue(dev_handle_, "BalanceWhiteAuto", MV_BALANCEWHITE_AUTO_OFF) == MV_OK);
   switch (config.white_selector)
   {
-      case 0:
-          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",0) == MV_OK);
-          break;
-      case 1:
-          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",1) == MV_OK);
-          break;
-      case 2:
-          assert(MV_CC_SetEnumValue(dev_handle_,"BalanceRatioSelector",2) == MV_OK);
-          break;
+    case 0:
+      assert(MV_CC_SetEnumValue(dev_handle_, "BalanceRatioSelector", 0) == MV_OK);
+      break;
+    case 1:
+      assert(MV_CC_SetEnumValue(dev_handle_, "BalanceRatioSelector", 1) == MV_OK);
+      break;
+    case 2:
+      assert(MV_CC_SetEnumValue(dev_handle_, "BalanceRatioSelector", 2) == MV_OK);
+      break;
   }
 
-    _MVCC_INTVALUE_T white_value;
+  _MVCC_INTVALUE_T white_value;
   if (config.white_auto)
   {
-    assert(MV_CC_SetEnumValue(dev_handle_,"BalanceWhiteAuto",MV_BALANCEWHITE_AUTO_CONTINUOUS ) == MV_OK);
-    assert(MV_CC_GetIntValue(dev_handle_,"BalanceRatio",&white_value) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "BalanceWhiteAuto", MV_BALANCEWHITE_AUTO_CONTINUOUS) == MV_OK);
+    assert(MV_CC_GetIntValue(dev_handle_, "BalanceRatio", &white_value) == MV_OK);
     config.white_value = white_value.nCurValue;
   }
   else
   {
-    assert(MV_CC_SetEnumValue(dev_handle_,"BalanceWhiteAuto",MV_BALANCEWHITE_AUTO_OFF ) == MV_OK);
-    assert(MV_CC_GetIntValue(dev_handle_,"BalanceRatio",&white_value) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "BalanceWhiteAuto", MV_BALANCEWHITE_AUTO_OFF) == MV_OK);
+    assert(MV_CC_GetIntValue(dev_handle_, "BalanceRatio", &white_value) == MV_OK);
     config.white_value = white_value.nCurValue;
   }
 
-  switch (config.gamma_selector) {
-      case 0:
-          assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true) == MV_OK);
-          assert(MV_CC_SetEnumValue(dev_handle_,"GammaSelector",MV_GAMMA_SELECTOR_SRGB)==MV_OK);
-          break;
-      case 1:
-          assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true) == MV_OK);
-          assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_USER) == MV_OK);
-          assert(MV_CC_SetGamma(dev_handle_,config.gamma_value) == MV_OK);
-          break;
-      case 2:
-          assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
-          break;
+  switch (config.gamma_selector)
+  {
+    case 0:
+      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true) == MV_OK);
+      assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_SRGB) == MV_OK);
+      break;
+    case 1:
+      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", true) == MV_OK);
+      assert(MV_CC_SetEnumValue(dev_handle_, "GammaSelector", MV_GAMMA_SELECTOR_USER) == MV_OK);
+      assert(MV_CC_SetGamma(dev_handle_, config.gamma_value) == MV_OK);
+      break;
+    case 2:
+      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
+      break;
   }
   width_ = config.width_offset;
 }

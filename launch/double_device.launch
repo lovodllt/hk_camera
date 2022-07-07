@@ -29,6 +29,7 @@
         <param name="camera_frame_id" value="camera_left_optical_frame"/>
         <param name="camera_sn" value="00K01829453"/>
         <param name="frame_rate" value="160"/>
+        <param name="sleep_time" value="5"/>
         <remap from="/image_rect" to="/image_rect_left" />
     </node>
 
