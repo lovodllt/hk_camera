@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
         image_transport
         camera_info_manager
         rm_msgs
+        cv_bridge
         )
 find_package(
         OpenCV REQUIRED
