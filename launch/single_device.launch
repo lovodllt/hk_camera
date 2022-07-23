@@ -12,6 +12,6 @@
         <param name="camera_info_url" value=""/>
         <param name="camera_frame_id" value="camera_optical_frame"/>
         <param name="camera_sn" value="00J67375789"/>
-        <param name="frame_rate" value="160"/>
+        <param name="frame_rate" value="200"/>
     </node>
 </launch>

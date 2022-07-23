@@ -158,20 +158,20 @@ void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFra
     cv::Mat cv_img;
     cv_ptr->image.copyTo(cv_img);
     sensor_msgs::ImagePtr image_rect_ptr;
-    if (strcmp(camera_name_.data(), "hk_right"))
-    {
-      cv::Rect rect(0, 0, 1440 - width_, 1080);
-      cv_img = cv_img(rect);
-      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
-      pub_rect_.publish(image_rect_ptr);
-    }
-    if (strcmp(camera_name_.data(), "hk_left"))
-    {
-      cv::Rect rect(width_, 0, 1440 - width_, 1080);
-      cv_img = cv_img(rect);
-      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
-      pub_rect_.publish(image_rect_ptr);
-    }
+    //    if (strcmp(camera_name_.data(), "hk_right"))
+    //    {
+    //      cv::Rect rect(0, 0, 1440 - width_, 1080);
+    //      cv_img = cv_img(rect);
+    //      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
+    //      pub_rect_.publish(image_rect_ptr);
+    //    }
+    //    if (strcmp(camera_name_.data(), "hk_left"))
+    //    {
+    //      cv::Rect rect(width_, 0, 1440 - width_, 1080);
+    //      cv_img = cv_img(rect);
+    //      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
+    //      pub_rect_.publish(image_rect_ptr);
+    //    }
 
     pub_.publish(image_, info_);
   }
