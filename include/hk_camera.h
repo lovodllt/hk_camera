@@ -17,6 +17,11 @@
 
 namespace hk_camera
 {
+struct TriggerPacket
+{
+  uint32_t trigger_counter_;
+  ros::Time trigger_time_;
+};
 class HKCameraNodelet : public nodelet::Nodelet
 {
 public:
@@ -29,6 +34,7 @@ public:
 
 private:
   void reconfigCB(CameraConfig& config, uint32_t level);
+  void triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref);
 
   ros::NodeHandle nh_;
   static void* dev_handle_;
@@ -44,6 +50,15 @@ private:
   static image_transport::CameraPublisher pub_;
   static ros::Publisher pub_rect_;
   static sensor_msgs::CameraInfo info_;
+  static bool enable_imu_trigger_;
+  static void fifoWrite(TriggerPacket pkt);
+  static bool fifoRead(TriggerPacket& pkt);
+  ros::Subscriber trigger_sub_;
+  static const int FIFO_SIZE;
+  static TriggerPacket fifo_[];
+  static uint32_t receive_trigger_counter_;
+  static int fifo_front_;
+  static int fifo_rear_;
   static void __stdcall onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser);
 };
 }  // namespace hk_camera

@@ -1,5 +1,6 @@
 
 <launch>
+    <arg name="enable_imu_trigger" default="false"/>
     <node pkg="nodelet" type="nodelet" name="vision_nodelet" args="manager"
           output="screen"/>
     <node pkg="nodelet" type="nodelet" name="hk_camera"
@@ -13,5 +14,6 @@
         <param name="camera_frame_id" value="camera_optical_frame"/>
         <param name="camera_sn" value="00J67375789"/>
         <param name="frame_rate" value="200"/>
+        <param name="enable_imu_trigger" value="$(arg enable_imu_trigger)"/>
     </node>
 </launch>
