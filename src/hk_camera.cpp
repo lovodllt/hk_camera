@@ -33,6 +33,7 @@ void HKCameraNodelet::onInit()
   nh_.param("camera_sn", camera_sn_, std::string(""));
   nh_.param("frame_rate", frame_rate_, 70);
   nh_.param("sleep_time", sleep_time_, 0);
+  nh_.param("enable_imu_trigger", enable_imu_trigger_, true);
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
   // check for default camera info
@@ -118,6 +119,23 @@ void HKCameraNodelet::onInit()
   MV_CC_SetFrameRate(dev_handle_, frame_rate_);
   MV_CC_GetFrameRate(dev_handle_, &frame_rate);
   ROS_INFO("Frame rate is: %f", frame_rate.fCurValue);
+
+  if (enable_imu_trigger_)
+  {
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerMode", 1) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerSource", MV_TRIGGER_SOURCE_LINE0) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerActivation", 0) == MV_OK);
+    //      Raising_filter_value Setting haven't been realized
+
+    trigger_sub_ = nh_.subscribe("/trigger_time", 50, &hk_camera::HKCameraNodelet::triggerCB, this);
+
+    //      imu_correspondence_service_ =
+    //              nh_.advertiseService("imu_camera_correspondece", hk_camera::HKCameraNodelet::imuCorrespondence);
+  }
+  else
+  {
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerMode", 0) == MV_OK);
+  }
   MV_CC_RegisterImageCallBackEx(dev_handle_, onFrameCB, dev_handle_);
 
   if (MV_CC_StartGrabbing(dev_handle_) == MV_OK)
@@ -132,13 +150,59 @@ void HKCameraNodelet::onInit()
   srv_->setCallback(cb);
 }
 
+void HKCameraNodelet::triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref)
+{
+  hk_camera::TriggerPacket pkt;
+  pkt.trigger_time_ = time_ref->time_ref;
+  pkt.trigger_counter_ = time_ref->header.seq;
+  fifoWrite(pkt);
+}
+
+void HKCameraNodelet::fifoWrite(TriggerPacket pkt)
+{
+  if (fifo_front_ == (fifo_rear_ + 1) % FIFO_SIZE)
+  {
+    ROS_WARN("FIFO overflow!");
+    return;
+  }
+  fifo_[fifo_rear_] = pkt;
+  fifo_rear_ = (fifo_rear_ + 1) % FIFO_SIZE;
+}
+
+bool HKCameraNodelet::fifoRead(TriggerPacket& pkt)
+{
+  if (fifo_front_ == fifo_rear_)
+    return false;
+  pkt = fifo_[fifo_front_];
+  fifo_front_ = (fifo_front_ + 1) % FIFO_SIZE;
+  return true;
+}
+
 void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser)
 {
   if (pFrameInfo)
   {
-    ros::Time now = ros::Time::now();
-    image_.header.stamp = now;
-    info_.header.stamp = now;
+    if (enable_imu_trigger_)
+    {
+      TriggerPacket pkt;
+      while (!fifoRead(pkt))
+      {
+        ros::Duration(0.001).sleep();
+      }
+      if (pkt.trigger_counter_ != receive_trigger_counter_++)
+        ROS_WARN("Trigger not in sync!");
+      else
+      {
+        image_.header.stamp = pkt.trigger_time_;
+        info_.header.stamp = pkt.trigger_time_;
+      }
+    }
+    else
+    {
+      ros::Time now = ros::Time::now();
+      image_.header.stamp = now;
+      info_.header.stamp = now;
+    }
 
     MV_CC_PIXEL_CONVERT_PARAM stConvertParam = { 0 };
     // Top to bottom are：image width, image height, input data buffer, input data size, source pixel format,
@@ -277,4 +341,10 @@ ros::Publisher HKCameraNodelet::pub_rect_;
 sensor_msgs::CameraInfo HKCameraNodelet::info_;
 int HKCameraNodelet::width_{};
 std::string HKCameraNodelet::camera_name_;
+bool HKCameraNodelet::enable_imu_trigger_;
+const int HKCameraNodelet::FIFO_SIZE = 1023;
+int HKCameraNodelet::fifo_front_ = 0;
+int HKCameraNodelet::fifo_rear_ = 0;
+struct TriggerPacket HKCameraNodelet::fifo_[FIFO_SIZE];
+uint32_t HKCameraNodelet::receive_trigger_counter_ = 0;
 }  // namespace hk_camera
