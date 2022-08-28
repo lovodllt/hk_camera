@@ -8,7 +8,7 @@ Dependencies:
 https://www.hikrobotics.com/cn/machinevision/service/download?module=0 and install,
 then extract `MVS-2.1.1_x86_64_20220511.tar.gz and decompress` it
 
-# before build
+# Before build
 You should modify this to the correct path in hk_camera/CMakeLists.txt
 ```
 link_directories("/opt/MVS/lib/64")
