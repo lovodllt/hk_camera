@@ -44,8 +44,8 @@ add_library(hk_camera
 target_link_libraries(hk_camera
         libMvCameraControl.so ${catkin_LIBRARIES} ${Opencv_LIBS})
 
-add_executable(hk_camera_node
-        src/hk_camera_node.cpp)
-add_dependencies(hk_camera_node ${PROJECT_NAME}_gencfg)
-target_link_libraries(hk_camera_node
-        libMvCameraControl.so ${catkin_LIBRARIES} ${Opencv_LIBS})
+#add_executable(hk_camera_node
+#        src/hk_camera_node.cpp)
+#add_dependencies(hk_camera_node ${PROJECT_NAME}_gencfg)
+#target_link_libraries(hk_camera_node
+#        libMvCameraControl.so ${catkin_LIBRARIES} ${Opencv_LIBS})

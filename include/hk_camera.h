@@ -14,6 +14,7 @@
 #include <rm_msgs/CameraStatus.h>
 #include <string>
 #include "libMVSapi/MvCameraControl.h"
+#include <rm_msgs/EnableImuTrigger.h>
 
 namespace hk_camera
 {
@@ -35,9 +36,11 @@ public:
 private:
   void reconfigCB(CameraConfig& config, uint32_t level);
   void triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref);
+  void enableTriggerCB(const ros::TimerEvent&);
 
   ros::NodeHandle nh_;
   static void* dev_handle_;
+  static ros::ServiceClient imu_trigger_client_;
   dynamic_reconfigure::Server<CameraConfig>* srv_{};
 
   boost::shared_ptr<camera_info_manager::CameraInfoManager> info_manager_;
@@ -50,15 +53,21 @@ private:
   static image_transport::CameraPublisher pub_;
   static ros::Publisher pub_rect_;
   static sensor_msgs::CameraInfo info_;
+  static std::string imu_name_;
   static bool enable_imu_trigger_;
+  static bool device_open_;
   static void fifoWrite(TriggerPacket pkt);
   static bool fifoRead(TriggerPacket& pkt);
   ros::Subscriber trigger_sub_;
+  static bool trigger_not_sync_;
+  ros::Timer enable_trigger_timer_;
+  ros::Time last_trigger_time_;
   static const int FIFO_SIZE;
   static TriggerPacket fifo_[];
   static uint32_t receive_trigger_counter_;
   static int fifo_front_;
   static int fifo_rear_;
+  ros::ServiceServer imu_correspondence_service_;
   static void __stdcall onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser);
 };
 }  // namespace hk_camera
