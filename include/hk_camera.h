@@ -46,8 +46,11 @@ private:
   boost::shared_ptr<camera_info_manager::CameraInfoManager> info_manager_;
   static std::string camera_name_;
   std::string camera_info_url_, pixel_format_, frame_id_, camera_sn_;
-  int frame_rate_;
+  double frame_rate_;
   int image_width_{}, image_height_{}, image_offset_x_{}, image_offset_y_{}, sleep_time_{};
+  double gain_value_{};
+  bool is_first_time_ = true;
+  bool gain_auto_{};
   static int width_;
   static unsigned char* img_;
   static image_transport::CameraPublisher pub_;

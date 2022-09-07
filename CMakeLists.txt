@@ -34,8 +34,7 @@ include_directories(
         ./
 )
 
-link_directories("/opt/MVS/lib/64")
-link_libraries("/opt/MVS/lib/64/libMvCameraControl.so")
+
 add_library(hk_camera
         src/hk_camera.cpp
         )

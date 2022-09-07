@@ -15,5 +15,7 @@
         <param name="camera_sn" value="00J67375789"/>
         <param name="frame_rate" value="200"/>
         <param name="enable_imu_trigger" value="$(arg enable_imu_trigger)"/>
+        <param name="gain_value" value="14"/>
+        <param name="gain_auto" value="false"/>
     </node>
 </launch>

@@ -31,10 +31,13 @@ void HKCameraNodelet::onInit()
   nh_.param("pixel_format", pixel_format_, std::string("bgr8"));
   nh_.param("frame_id", frame_id_, std::string("camera_optical_frame"));
   nh_.param("camera_sn", camera_sn_, std::string(""));
-  nh_.param("frame_rate", frame_rate_, 70);
+  nh_.param("frame_rate", frame_rate_, 70.0);
   nh_.param("sleep_time", sleep_time_, 0);
   nh_.param("enable_imu_trigger", enable_imu_trigger_, false);
   nh_.param("imu_name", imu_name_, std::string("gimbal_imu"));
+  nh_.param("gain_value", gain_value_, 15.0);
+  nh_.param("gain_auto",gain_auto_, false);
+
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
   // check for default camera info
@@ -308,31 +311,39 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   {
     _MVCC_FLOATVALUE_T exposure_time;
     assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min) == MV_OK);
-    MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeUpperLimit", config.exposure_max);
-    MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_CONTINUOUS);
-    MV_CC_GetFloatValue(dev_handle_, "ExposureTime", &exposure_time);
+    assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeUpperLimit", config.exposure_max) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_CONTINUOUS) == MV_OK);
+    assert(MV_CC_GetFloatValue(dev_handle_, "ExposureTime", &exposure_time) == MV_OK);
     config.exposure_value = exposure_time.fCurValue;
   }
   else
   {
-    MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_OFF);
+    assert(MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_OFF) == MV_OK);
     assert(MV_CC_SetFloatValue(dev_handle_, "ExposureTime", config.exposure_value) == MV_OK);
   }
 
   // Gain
+  if(is_first_time_){
+      config.gain_auto = gain_auto_;
+      config.gain_value = gain_value_;
+      is_first_time_ = false;
+  }
   if (config.gain_auto)
   {
     _MVCC_FLOATVALUE_T gain_value;
     assert(MV_CC_SetFloatValue(dev_handle_, "AutoGainLowerLimit", config.gain_min) == MV_OK);
-    MV_CC_SetFloatValue(dev_handle_, "AutoGainUpperLimit", config.gain_max);
-    MV_CC_SetEnumValue(dev_handle_, "GainAuto", MV_GAIN_MODE_CONTINUOUS);
-    MV_CC_GetFloatValue(dev_handle_, "Gain", &gain_value);
+    assert(MV_CC_SetFloatValue(dev_handle_, "AutoGainUpperLimit", config.gain_max) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "GainAuto", MV_GAIN_MODE_CONTINUOUS) == MV_OK);
+    assert(MV_CC_GetFloatValue(dev_handle_, "Gain", &gain_value) == MV_OK);
     config.gain_value = gain_value.fCurValue;
   }
   else
   {
-    MV_CC_SetEnumValue(dev_handle_, "GainAuto", MV_GAIN_MODE_OFF);
-    MV_CC_SetFloatValue(dev_handle_, "Gain", config.gain_value);
+    _MVCC_FLOATVALUE_T gain_value;
+    assert(MV_CC_SetEnumValue(dev_handle_, "GainAuto", MV_GAIN_MODE_OFF) == MV_OK);
+    assert(MV_CC_SetFloatValue(dev_handle_, "Gain", config.gain_value) == MV_OK);
+    assert(MV_CC_GetFloatValue(dev_handle_, "Gain", &gain_value) == MV_OK);
+    config.gain_value = gain_value.fCurValue;
   }
 
   // Black level
@@ -380,7 +391,8 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
       assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
       break;
   }
-  width_ = config.width_offset;
+//  Width offset of image
+//  width_ = config.width_offset;
 }
 
 HKCameraNodelet::~HKCameraNodelet()
