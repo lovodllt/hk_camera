@@ -36,7 +36,7 @@ void HKCameraNodelet::onInit()
   nh_.param("enable_imu_trigger", enable_imu_trigger_, false);
   nh_.param("imu_name", imu_name_, std::string("gimbal_imu"));
   nh_.param("gain_value", gain_value_, 15.0);
-  nh_.param("gain_auto",gain_auto_, false);
+  nh_.param("gain_auto", gain_auto_, false);
 
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
@@ -170,6 +170,7 @@ void HKCameraNodelet::onInit()
 
 void HKCameraNodelet::triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref)
 {
+  last_trigger_time_ = time_ref->time_ref;
   hk_camera::TriggerPacket pkt;
   pkt.trigger_time_ = time_ref->time_ref;
   pkt.trigger_counter_ = time_ref->header.seq;
@@ -323,10 +324,11 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   }
 
   // Gain
-  if(is_first_time_){
-      config.gain_auto = gain_auto_;
-      config.gain_value = gain_value_;
-      is_first_time_ = false;
+  if (is_first_time_)
+  {
+    config.gain_auto = gain_auto_;
+    config.gain_value = gain_value_;
+    is_first_time_ = false;
   }
   if (config.gain_auto)
   {
@@ -391,8 +393,8 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
       assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
       break;
   }
-//  Width offset of image
-//  width_ = config.width_offset;
+  //  Width offset of image
+  //  width_ = config.width_offset;
 }
 
 HKCameraNodelet::~HKCameraNodelet()
