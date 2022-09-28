@@ -17,6 +17,8 @@
         <param name="enable_imu_trigger" value="$(arg enable_imu_trigger)"/>
         <param name="gain_value" value="14"/>
         <param name="gain_auto" value="false"/>
+        <param name="gamma_selector" value="0"/>
+        <param name="gamma_value" value="0.7"/>
         <remap from="/image_rect" to="/image_rect_right" />
     </node>
     <node pkg="nodelet" type="nodelet" name="vision_nodelet_left" args="manager"
@@ -35,6 +37,8 @@
         <param name="enable_imu_trigger" value="$(arg enable_imu_trigger)"/>
         <param name="gain_value" value="14"/>
         <param name="gain_auto" value="false"/>
+        <param name="gamma_selector" value="0"/>
+        <param name="gamma_value" value="0.7"/>
         <param name="sleep_time" value="5"/>
         <remap from="/image_rect" to="/image_rect_left" />
     </node>

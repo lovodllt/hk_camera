@@ -37,6 +37,8 @@ void HKCameraNodelet::onInit()
   nh_.param("imu_name", imu_name_, std::string("gimbal_imu"));
   nh_.param("gain_value", gain_value_, 15.0);
   nh_.param("gain_auto", gain_auto_, false);
+  nh_.param("gamma_selector", gamma_selector_, 0);
+  nh_.param("gamma_value", gamma_value_, 0.0);
 
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
@@ -323,13 +325,17 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
     assert(MV_CC_SetFloatValue(dev_handle_, "ExposureTime", config.exposure_value) == MV_OK);
   }
 
-  // Gain
+  // Launch setting
   if (is_first_time_)
   {
     config.gain_auto = gain_auto_;
     config.gain_value = gain_value_;
+    config.gamma_selector = gamma_selector_;
+    config.gamma_value = gamma_value_;
     is_first_time_ = false;
   }
+
+  // Gain
   if (config.gain_auto)
   {
     _MVCC_FLOATVALUE_T gain_value;

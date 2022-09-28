@@ -49,6 +49,8 @@ private:
   double frame_rate_;
   int image_width_{}, image_height_{}, image_offset_x_{}, image_offset_y_{}, sleep_time_{};
   double gain_value_{};
+  int gamma_selector_{};
+  double gamma_value_{};
   bool is_first_time_ = true;
   bool gain_auto_{};
   static int width_;
