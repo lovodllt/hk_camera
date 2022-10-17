@@ -7,6 +7,8 @@
 #include <ros/time.h>
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
+#include <iostream>
+#include <fstream>
 
 namespace hk_camera
 {
@@ -31,7 +33,7 @@ void HKCameraNodelet::onInit()
   nh_.param("pixel_format", pixel_format_, std::string("bgr8"));
   nh_.param("frame_id", frame_id_, std::string("camera_optical_frame"));
   nh_.param("camera_sn", camera_sn_, std::string(""));
-  nh_.param("frame_rate", frame_rate_, 70.0);
+  nh_.param("frame_rate", frame_rate_, 200.0);
   nh_.param("sleep_time", sleep_time_, 0);
   nh_.param("enable_imu_trigger", enable_imu_trigger_, false);
   nh_.param("imu_name", imu_name_, std::string("gimbal_imu"));
@@ -39,6 +41,12 @@ void HKCameraNodelet::onInit()
   nh_.param("gain_auto", gain_auto_, false);
   nh_.param("gamma_selector", gamma_selector_, 0);
   nh_.param("gamma_value", gamma_value_, 0.0);
+  nh_.param("exposure_auto", exposure_auto_, true);
+  nh_.param("exposure_value", exposure_value_, 20.0);
+  nh_.param("exposure_max", exposure_max_, 20.0);
+  nh_.param("exposure_min", exposure_min_, 20.0);
+  nh_.param("white_auto", white_auto_, true);
+  nh_.param("white_selector", white_selector_, 0);
 
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
@@ -309,6 +317,23 @@ void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFra
 void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
 {
   (void)level;
+
+  // Launch setting
+  if (initialize_flag_)
+  {
+    config.exposure_auto = exposure_auto_;
+    config.exposure_value = exposure_value_;
+    config.exposure_max = exposure_max_;
+    config.exposure_min = exposure_min_;
+    config.gain_auto = gain_auto_;
+    config.gain_value = gain_value_;
+    config.gamma_selector = gamma_selector_;
+    config.gamma_value = gamma_value_;
+    config.white_auto = white_auto_;
+    config.white_selector = white_selector_;
+    initialize_flag_ = false;
+  }
+
   // Exposure
   if (config.exposure_auto)
   {
@@ -323,16 +348,6 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   {
     assert(MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_OFF) == MV_OK);
     assert(MV_CC_SetFloatValue(dev_handle_, "ExposureTime", config.exposure_value) == MV_OK);
-  }
-
-  // Launch setting
-  if (is_first_time_)
-  {
-    config.gain_auto = gain_auto_;
-    config.gain_value = gain_value_;
-    config.gamma_selector = gamma_selector_;
-    config.gamma_value = gamma_value_;
-    is_first_time_ = false;
   }
 
   // Gain

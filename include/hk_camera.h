@@ -51,8 +51,14 @@ private:
   double gain_value_{};
   int gamma_selector_{};
   double gamma_value_{};
-  bool is_first_time_ = true;
+  bool initialize_flag_ = true;
   bool gain_auto_{};
+  bool exposure_auto_{};
+  double exposure_value_{};
+  double exposure_max_{};
+  double exposure_min_{};
+  bool white_auto_{};
+  int white_selector_{};
   static int width_;
   static unsigned char* img_;
   static image_transport::CameraPublisher pub_;
