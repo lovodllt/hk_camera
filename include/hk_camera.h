@@ -66,6 +66,9 @@ private:
   static sensor_msgs::CameraInfo info_;
   static std::string imu_name_;
   static bool enable_imu_trigger_;
+  static bool enable_resolution_;
+  static int resolution_ratio_width_;
+  static int resolution_ratio_height_;
   static bool device_open_;
   static void fifoWrite(TriggerPacket pkt);
   static bool fifoRead(TriggerPacket& pkt);

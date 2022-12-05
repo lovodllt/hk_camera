@@ -43,10 +43,13 @@ void HKCameraNodelet::onInit()
   nh_.param("gamma_value", gamma_value_, 0.0);
   nh_.param("exposure_auto", exposure_auto_, true);
   nh_.param("exposure_value", exposure_value_, 20.0);
-  nh_.param("exposure_max", exposure_max_, 20.0);
+  nh_.param("exposure_max", exposure_max_, 3000.0);
   nh_.param("exposure_min", exposure_min_, 20.0);
   nh_.param("white_auto", white_auto_, true);
   nh_.param("white_selector", white_selector_, 0);
+  nh_.param("enable_resolution", enable_resolution_, false);
+  nh_.param("resolution_ratio_width", resolution_ratio_width_, 1440);
+  nh_.param("resolution_ratio_height", resolution_ratio_height_, 1080);
 
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
@@ -73,7 +76,18 @@ void HKCameraNodelet::onInit()
 
   MV_CC_DEVICE_INFO_LIST stDeviceList;
   memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
-  assert(MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE, &stDeviceList) == MV_OK);
+  try
+  {
+    int nRet = MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE, &stDeviceList);
+    if (nRet != MV_OK)
+      throw(nRet);
+  }
+  catch (int nRet)
+  {
+    std::cout << "MV_CC_EnumDevices fail! nRet " << std::hex << nRet << std::endl;
+    exit(-1);
+  }
+  //  assert(MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE, &stDeviceList) == MV_OK);
   assert(stDeviceList.nDeviceNum > 0);
 
   // Opens the device.
@@ -137,11 +151,12 @@ void HKCameraNodelet::onInit()
   if (enable_imu_trigger_)
   {
     assert(MV_CC_SetEnumValue(dev_handle_, "TriggerMode", 1) == MV_OK);
-    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerSource", MV_TRIGGER_SOURCE_LINE0) == MV_OK);
-    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerActivation", 0) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerSource", MV_TRIGGER_SOURCE_LINE2) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerActivation", 2) == MV_OK);
     //      Raising_filter_value Setting haven't been realized
 
-    trigger_sub_ = nh_.subscribe("/rm_hw/gimbal_imu/trigger_time", 50, &hk_camera::HKCameraNodelet::triggerCB, this);
+    trigger_sub_ =
+        nh_.subscribe("/rm_hw/" + imu_name_ + "/trigger_time", 50, &hk_camera::HKCameraNodelet::triggerCB, this);
   }
   else
   {
@@ -240,11 +255,11 @@ void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFra
           ROS_WARN("Trigger not in sync!");
           trigger_not_sync_ = true;
         }
-        else if ((now - pkt.trigger_time_).toSec() < 0)
-        {
-          ROS_WARN("Trigger not in sync! Maybe any CAN frames have be dropped?");
-          trigger_not_sync_ = true;
-        }
+        //        else if ((now - pkt.trigger_time_).toSec() < 0)
+        //        {
+        //          ROS_WARN("Trigger not in sync! Maybe any CAN frames have be dropped?");
+        //          trigger_not_sync_ = true;
+        //        }
         else if ((now - pkt.trigger_time_).toSec() > 0.06)
         {
           ROS_WARN("Trigger not in sync! Maybe imu %s does not actually trigger camera?", imu_name_.c_str());
@@ -288,26 +303,34 @@ void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFra
     stConvertParam.nDstBufferSize = pFrameInfo->nWidth * pFrameInfo->nHeight * 3;
     MV_CC_ConvertPixelType(dev_handle_, &stConvertParam);
     memcpy((char*)(&image_.data[0]), img_, image_.step * image_.height);
-    //    cv_bridge::CvImagePtr cv_ptr;
-    //    cv_ptr = cv_bridge::toCvCopy(image_, "bgr8");
-    //    cv::Mat cv_img;
-    //    cv_ptr->image.copyTo(cv_img);
-    //    sensor_msgs::ImagePtr image_rect_ptr;
-    //    if (strcmp(camera_name_.data(), "hk_right"))
-    //    {
-    //      cv::Rect rect(0, 0, 1440 - width_, 1080);
-    //      cv_img = cv_img(rect);
-    //      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
-    //      pub_rect_.publish(image_rect_ptr);
-    //    }
-    //    if (strcmp(camera_name_.data(), "hk_left"))
-    //    {
-    //      cv::Rect rect(width_, 0, 1440 - width_, 1080);
-    //      cv_img = cv_img(rect);
-    //      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
-    //      pub_rect_.publish(image_rect_ptr);
-    //    }
 
+    if (enable_resolution_)
+    {
+      cv_bridge::CvImagePtr cv_ptr;
+      cv_ptr = cv_bridge::toCvCopy(image_, "bgr8");
+      cv::Mat cv_img;
+      cv_ptr->image.copyTo(cv_img);
+      sensor_msgs::ImagePtr image_rect_ptr;
+
+      cv::resize(cv_img, cv_img, cvSize(resolution_ratio_width_, resolution_ratio_height_));
+      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
+      pub_rect_.publish(image_rect_ptr);
+
+      //    if (strcmp(camera_name_.data(), "hk_right"))
+      //    {
+      //      cv::Rect rect(0, 0, 1440 - width_, 1080);
+      //      cv_img = cv_img(rect);
+      //      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
+      //      pub_rect_.publish(image_rect_ptr);
+      //    }
+      //    if (strcmp(camera_name_.data(), "hk_left"))
+      //    {
+      //      cv::Rect rect(width_, 0, 1440 - width_, 1080);
+      //      cv_img = cv_img(rect);
+      //      image_rect_ptr = cv_bridge::CvImage(std_msgs::Header(), "bgr8", cv_img).toImageMsg();
+      //      pub_rect_.publish(image_rect_ptr);
+      //    }
+    }
     pub_.publish(image_, info_);
   }
   else
@@ -443,4 +466,7 @@ int HKCameraNodelet::fifo_rear_ = 0;
 bool HKCameraNodelet::device_open_ = true;
 struct TriggerPacket HKCameraNodelet::fifo_[FIFO_SIZE];
 uint32_t HKCameraNodelet::receive_trigger_counter_ = 0;
+bool HKCameraNodelet::enable_resolution_ = false;
+int HKCameraNodelet::resolution_ratio_width_ = 1440;
+int HKCameraNodelet::resolution_ratio_height_ = 1080;
 }  // namespace hk_camera
