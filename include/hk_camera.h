@@ -59,6 +59,7 @@ private:
   double exposure_min_{};
   bool white_auto_{};
   int white_selector_{};
+  bool stop_grab_{};
   static int width_;
   static unsigned char* img_;
   static image_transport::CameraPublisher pub_;

@@ -50,6 +50,7 @@ void HKCameraNodelet::onInit()
   nh_.param("enable_resolution", enable_resolution_, false);
   nh_.param("resolution_ratio_width", resolution_ratio_width_, 1440);
   nh_.param("resolution_ratio_height", resolution_ratio_height_, 1080);
+  nh_.param("stop_grab", stop_grab_, false);
 
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
@@ -354,8 +355,15 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
     config.gamma_value = gamma_value_;
     config.white_auto = white_auto_;
     config.white_selector = white_selector_;
+    config.stop_grab = stop_grab_;
     initialize_flag_ = false;
   }
+
+  // Switch camera
+  if (!config.stop_grab)
+    MV_CC_StartGrabbing(dev_handle_);
+  else
+    MV_CC_StopGrabbing(dev_handle_);
 
   // Exposure
   if (config.exposure_auto)
