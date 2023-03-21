@@ -9,6 +9,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <iostream>
 #include <fstream>
+#include <string>
 
 namespace hk_camera
 {
@@ -39,7 +40,7 @@ void HKCameraNodelet::onInit()
   nh_.param("imu_name", imu_name_, std::string("gimbal_imu"));
   nh_.param("gain_value", gain_value_, 15.0);
   nh_.param("gain_auto", gain_auto_, false);
-  nh_.param("gamma_selector", gamma_selector_, 0);
+  nh_.param("gamma_selector", gamma_selector_, 2);
   nh_.param("gamma_value", gamma_value_, 0.0);
   nh_.param("exposure_auto", exposure_auto_, true);
   nh_.param("exposure_value", exposure_value_, 20.0);
@@ -152,7 +153,7 @@ void HKCameraNodelet::onInit()
   if (enable_imu_trigger_)
   {
     assert(MV_CC_SetEnumValue(dev_handle_, "TriggerMode", 1) == MV_OK);
-    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerSource", MV_TRIGGER_SOURCE_LINE2) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerSource", MV_TRIGGER_SOURCE_LINE0) == MV_OK);
     assert(MV_CC_SetEnumValue(dev_handle_, "TriggerActivation", 2) == MV_OK);
     //      Raising_filter_value Setting haven't been realized
 
@@ -192,6 +193,16 @@ void HKCameraNodelet::onInit()
       ROS_ERROR("Failed to enable imu %s trigger camera", imu_name_.c_str());
     enable_trigger_timer_ = nh_.createTimer(ros::Duration(0.5), &HKCameraNodelet::enableTriggerCB, this);
   }
+
+  camera_change_sub = nh_.subscribe("/camera_name", 50, &hk_camera::HKCameraNodelet::cameraChange, this);
+}
+
+void HKCameraNodelet::cameraChange(const std_msgs::String camera_change)
+{
+  if (strcmp(camera_change.data.c_str(), "hk_camera") == 0)
+    MV_CC_StartGrabbing(dev_handle_);
+  else
+    MV_CC_StopGrabbing(dev_handle_);
 }
 
 void HKCameraNodelet::triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref)
@@ -251,17 +262,18 @@ void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFra
         {
           ros::Duration(0.001).sleep();
         }
+        //        ROS_INFO("imu:%f", now.toSec() - pkt.trigger_time_.toSec());
         if (pkt.trigger_counter_ != receive_trigger_counter_++)
         {
           ROS_WARN("Trigger not in sync!");
           trigger_not_sync_ = true;
         }
-        //        else if ((now - pkt.trigger_time_).toSec() < 0)
-        //        {
-        //          ROS_WARN("Trigger not in sync! Maybe any CAN frames have be dropped?");
-        //          trigger_not_sync_ = true;
-        //        }
-        else if ((now - pkt.trigger_time_).toSec() > 0.06)
+        else if ((now - pkt.trigger_time_).toSec() < 0)
+        {
+          ROS_WARN("Trigger not in sync! Maybe any CAN frames have be dropped?");
+          trigger_not_sync_ = true;
+        }
+        else if ((now - pkt.trigger_time_).toSec() > 0.013)
         {
           ROS_WARN("Trigger not in sync! Maybe imu %s does not actually trigger camera?", imu_name_.c_str());
           trigger_not_sync_ = true;
@@ -304,6 +316,19 @@ void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFra
     stConvertParam.nDstBufferSize = pFrameInfo->nWidth * pFrameInfo->nHeight * 3;
     MV_CC_ConvertPixelType(dev_handle_, &stConvertParam);
     memcpy((char*)(&image_.data[0]), img_, image_.step * image_.height);
+
+    //      if(take_photo_)
+    //      {
+    //          std::string str;
+    //          str = std::to_string(count_);
+    //          ROS_INFO("ok");
+    //          cv_bridge::CvImagePtr cv_ptr1;
+    //          cv_ptr1 = cv_bridge::toCvCopy(image_, "bgr8");
+    //          cv::Mat cv_img1;
+    //          cv_ptr1->image.copyTo(cv_img1);
+    //          cv::imwrite("/home/irving/carphoto/"+str+".jpg",cv_img1);
+    //          count_++;
+    //      }
 
     if (enable_resolution_)
     {
@@ -445,6 +470,8 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
       assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
       break;
   }
+
+  take_photo_ = config.take_photo;
   //  Width offset of image
   //  width_ = config.width_offset;
 }
@@ -469,9 +496,11 @@ ros::ServiceClient HKCameraNodelet::imu_trigger_client_;
 bool HKCameraNodelet::enable_imu_trigger_;
 bool HKCameraNodelet::trigger_not_sync_ = false;
 const int HKCameraNodelet::FIFO_SIZE = 1023;
+int HKCameraNodelet::count_ = 837;
 int HKCameraNodelet::fifo_front_ = 0;
 int HKCameraNodelet::fifo_rear_ = 0;
 bool HKCameraNodelet::device_open_ = true;
+bool HKCameraNodelet::take_photo_{};
 struct TriggerPacket HKCameraNodelet::fifo_[FIFO_SIZE];
 uint32_t HKCameraNodelet::receive_trigger_counter_ = 0;
 bool HKCameraNodelet::enable_resolution_ = false;

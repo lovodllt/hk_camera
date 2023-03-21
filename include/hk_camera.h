@@ -15,6 +15,8 @@
 #include <string>
 #include "libMVSapi/MvCameraControl.h"
 #include <rm_msgs/EnableImuTrigger.h>
+#include <termios.h>
+#include <std_msgs/String.h>
 
 namespace hk_camera
 {
@@ -37,6 +39,7 @@ private:
   void reconfigCB(CameraConfig& config, uint32_t level);
   void triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref);
   void enableTriggerCB(const ros::TimerEvent&);
+  void cameraChange(const std_msgs::String);
 
   ros::NodeHandle nh_;
   static void* dev_handle_;
@@ -82,8 +85,11 @@ private:
   static uint32_t receive_trigger_counter_;
   static int fifo_front_;
   static int fifo_rear_;
+  static bool take_photo_;
+  static int count_;
   ros::ServiceServer imu_correspondence_service_;
   static void __stdcall onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser);
+  ros::Subscriber camera_change_sub;
 };
 }  // namespace hk_camera
 
