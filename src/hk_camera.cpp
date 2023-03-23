@@ -153,7 +153,7 @@ void HKCameraNodelet::onInit()
   if (enable_imu_trigger_)
   {
     assert(MV_CC_SetEnumValue(dev_handle_, "TriggerMode", 1) == MV_OK);
-    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerSource", MV_TRIGGER_SOURCE_LINE0) == MV_OK);
+    assert(MV_CC_SetEnumValue(dev_handle_, "TriggerSource", MV_TRIGGER_SOURCE_LINE2) == MV_OK);
     assert(MV_CC_SetEnumValue(dev_handle_, "TriggerActivation", 2) == MV_OK);
     //      Raising_filter_value Setting haven't been realized
 
