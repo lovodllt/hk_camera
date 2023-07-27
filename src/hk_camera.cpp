@@ -41,7 +41,7 @@ void HKCameraNodelet::onInit()
   nh_.param("gain_value", gain_value_, 15.0);
   nh_.param("gain_auto", gain_auto_, false);
   nh_.param("gamma_selector", gamma_selector_, 2);
-  nh_.param("gamma_value", gamma_value_, 0.0);
+  nh_.param("gamma_value", gamma_value_, 0.5);
   nh_.param("exposure_auto", exposure_auto_, true);
   nh_.param("exposure_value", exposure_value_, 20.0);
   nh_.param("exposure_max", exposure_max_, 3000.0);
@@ -178,7 +178,7 @@ void HKCameraNodelet::onInit()
   srv_->setCallback(cb);
   if (enable_imu_trigger_)
   {
-    imu_trigger_client_ = ros::NodeHandle("rm_hw").serviceClient<rm_msgs::EnableImuTrigger>("enable_imu_trigger");
+    imu_trigger_client_ = nh_.serviceClient<rm_msgs::EnableImuTrigger>("imu_trigger");
     rm_msgs::EnableImuTrigger imu_trigger_srv;
     imu_trigger_srv.request.imu_name = imu_name_;
     imu_trigger_srv.request.enable_trigger = true;
