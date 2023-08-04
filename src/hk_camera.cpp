@@ -268,11 +268,11 @@ void HKCameraNodelet::onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFra
           ROS_WARN("Trigger not in sync!");
           trigger_not_sync_ = true;
         }
-        else if ((now - pkt.trigger_time_).toSec() < 0)
-        {
-          ROS_WARN("Trigger not in sync! Maybe any CAN frames have be dropped?");
-          trigger_not_sync_ = true;
-        }
+//        else if ((now - pkt.trigger_time_).toSec() < 0)
+//        {
+//          ROS_WARN("Trigger not in sync! Maybe any CAN frames have be dropped?");
+//          trigger_not_sync_ = true;
+//        }
         else if ((now - pkt.trigger_time_).toSec() > 0.013)
         {
           ROS_WARN("Trigger not in sync! Maybe imu %s does not actually trigger camera?", imu_name_.c_str());
