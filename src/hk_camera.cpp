@@ -394,7 +394,8 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   if (config.exposure_auto)
   {
     _MVCC_FLOATVALUE_T exposure_time;
-    assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min) == MV_OK);
+//    assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min) == MV_OK);
+    MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min) == MV_OK;
     assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeUpperLimit", config.exposure_max) == MV_OK);
     assert(MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_CONTINUOUS) == MV_OK);
     assert(MV_CC_GetFloatValue(dev_handle_, "ExposureTime", &exposure_time) == MV_OK);
@@ -467,7 +468,8 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
       assert(MV_CC_SetGamma(dev_handle_, config.gamma_value) == MV_OK);
       break;
     case 2:
-      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
+//      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
+      MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false);
       break;
   }
 
