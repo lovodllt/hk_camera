@@ -45,7 +45,7 @@ void HKCameraNodelet::onInit()
   nh_.param("exposure_auto", exposure_auto_, true);
   nh_.param("exposure_value", exposure_value_, 20.0);
   nh_.param("exposure_max", exposure_max_, 3000.0);
-  nh_.param("exposure_min", exposure_min_, 20.0);
+  nh_.param("exposure_min", exposure_min_, 50.0);
   nh_.param("white_auto", white_auto_, true);
   nh_.param("white_selector", white_selector_, 0);
   nh_.param("enable_resolution", enable_resolution_, false);
@@ -468,8 +468,8 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
       assert(MV_CC_SetGamma(dev_handle_, config.gamma_value) == MV_OK);
       break;
     case 2:
-//      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
-      MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false);
+      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
+//      MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false);
       break;
   }
 
