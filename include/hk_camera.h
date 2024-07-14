@@ -17,6 +17,7 @@
 #include <rm_msgs/EnableImuTrigger.h>
 #include <termios.h>
 #include <std_msgs/String.h>
+#include <rm_msgs/StatusChange.h>
 
 namespace hk_camera
 {
@@ -40,6 +41,8 @@ private:
   void triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref);
   void enableTriggerCB(const ros::TimerEvent&);
   void cameraChange(const std_msgs::String);
+  bool changeStatusCB(rm_msgs::StatusChange::Request& change, rm_msgs::StatusChange::Response& res);
+  ros::ServiceServer status_change_srv_;
 
   ros::NodeHandle nh_;
   static void* dev_handle_;

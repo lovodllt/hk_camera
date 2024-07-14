@@ -23,6 +23,7 @@ void HKCameraNodelet::onInit()
   nh_ = this->getPrivateNodeHandle();
   image_transport::ImageTransport it(nh_);
   pub_ = it.advertiseCamera("image_raw", 1);
+  this->status_change_srv_ = nh_.advertiseService("/exposure_status_switch", &HKCameraNodelet::changeStatusCB, this);
 
   nh_.param("camera_frame_id", image_.header.frame_id, std::string("camera_optical_frame"));
   nh_.param("camera_name", camera_name_, std::string("camera"));
@@ -195,6 +196,18 @@ void HKCameraNodelet::onInit()
   }
 
   camera_change_sub = nh_.subscribe("/camera_name", 50, &hk_camera::HKCameraNodelet::cameraChange, this);
+}
+
+bool HKCameraNodelet::changeStatusCB(rm_msgs::StatusChange::Request& change, rm_msgs::StatusChange::Response& res)
+{
+  if (change.target)
+    nh_.param("exposure_value_windmill", exposure_value_, 20.0);
+  else
+    nh_.param("exposure_value", exposure_value_, 20.0);
+  assert(MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_OFF) == MV_OK);
+  assert(MV_CC_SetFloatValue(dev_handle_, "ExposureTime", exposure_value_) == MV_OK);
+  res.switch_is_success = true;
+  return true;
 }
 
 void HKCameraNodelet::cameraChange(const std_msgs::String camera_change)
