@@ -13,6 +13,8 @@
 #include <sensor_msgs/TimeReference.h>
 #include <rm_msgs/CameraStatus.h>
 #include <string>
+#include <thread>
+#include <chrono>
 #include "libMVSapi/MvCameraControl.h"
 #include <rm_msgs/EnableImuTrigger.h>
 #include <termios.h>
@@ -35,21 +37,25 @@ public:
   void onInit() override;
   static sensor_msgs::Image image_;
   static sensor_msgs::Image image_rect;
+  void timerCallback(const ros::TimerEvent&);
 
 private:
   void reconfigCB(CameraConfig& config, uint32_t level);
   void triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref);
   void enableTriggerCB(const ros::TimerEvent&);
   void cameraChange(const std_msgs::String);
+  void initializeCamera();
   bool changeStatusCB(rm_msgs::StatusChange::Request& change, rm_msgs::StatusChange::Response& res);
   ros::ServiceServer status_change_srv_;
 
   ros::NodeHandle nh_;
   static void* dev_handle_;
   static ros::ServiceClient imu_trigger_client_;
+  static bool camera_restart_flag_;
   dynamic_reconfigure::Server<CameraConfig>* srv_{};
 
   boost::shared_ptr<camera_info_manager::CameraInfoManager> info_manager_;
+  ros::Timer timer_;
   static std::string camera_name_;
   std::string camera_info_url_, pixel_format_, frame_id_, camera_sn_;
   double frame_rate_;
@@ -76,7 +82,6 @@ private:
   static bool enable_resolution_;
   static int resolution_ratio_width_;
   static int resolution_ratio_height_;
-  static bool device_open_;
   static void fifoWrite(TriggerPacket pkt);
   static bool fifoRead(TriggerPacket& pkt);
   ros::Subscriber trigger_sub_;
@@ -89,7 +94,6 @@ private:
   static int fifo_front_;
   static int fifo_rear_;
   static bool take_photo_;
-  static int count_;
   ros::ServiceServer imu_correspondence_service_;
   static void __stdcall onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser);
   ros::Subscriber camera_change_sub;

@@ -4,7 +4,7 @@
           output="screen"/>
     <node pkg="nodelet" type="nodelet" name="hk_camera"
           args="load hk_camera/HKCameraNodelet vision_nodelet"
-          output="screen">
+          output="screen" respawn="true">
         <param name="camera_name" value="hk_camera"/>
         <param name="image_width" value="1440"/>
         <param name="image_height" value="1080"/>

@@ -77,6 +77,40 @@ void HKCameraNodelet::onInit()
   image_.encoding = pixel_format_;
   img_ = new unsigned char[image_.height * image_.step];
 
+  initializeCamera();
+
+  ros::NodeHandle p_nh(nh_, "hk_camera_reconfig");
+  pub_rect_ = p_nh.advertise<sensor_msgs::Image>("/image_rect", 1);
+  srv_ = new dynamic_reconfigure::Server<CameraConfig>(p_nh);
+  dynamic_reconfigure::Server<CameraConfig>::CallbackType cb = boost::bind(&HKCameraNodelet::reconfigCB, this, _1, _2);
+  srv_->setCallback(cb);
+  if (enable_imu_trigger_)
+  {
+    imu_trigger_client_ = nh_.serviceClient<rm_msgs::EnableImuTrigger>("imu_trigger");
+    rm_msgs::EnableImuTrigger imu_trigger_srv;
+    imu_trigger_srv.request.imu_name = imu_name_;
+    imu_trigger_srv.request.enable_trigger = true;
+    while (!imu_trigger_client_.call(imu_trigger_srv))
+    {
+      ROS_WARN("Failed to call service enable_imu_trigger. Retry now.");
+      ros::Duration(1).sleep();
+    }
+    if (imu_trigger_srv.response.is_success)
+      ROS_INFO("Enable imu %s trigger camera successfully", imu_name_.c_str());
+    else
+      ROS_ERROR("Failed to enable imu %s trigger camera", imu_name_.c_str());
+    enable_trigger_timer_ = nh_.createTimer(ros::Duration(0.5), &HKCameraNodelet::enableTriggerCB, this);
+  }
+
+  camera_change_sub = nh_.subscribe("/camera_name", 50, &hk_camera::HKCameraNodelet::cameraChange, this);
+
+  timer_ = nh_.createTimer(ros::Duration(0.1), &HKCameraNodelet::timerCallback, this);
+  ROS_INFO("Camera %s is ready", camera_name_.c_str());
+
+}
+
+void HKCameraNodelet::initializeCamera()
+{
   MV_CC_DEVICE_INFO_LIST stDeviceList;
   memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
   try
@@ -171,31 +205,29 @@ void HKCameraNodelet::onInit()
   {
     ROS_INFO("Stream On.");
   }
+}
 
-  ros::NodeHandle p_nh(nh_, "hk_camera_reconfig");
-  pub_rect_ = p_nh.advertise<sensor_msgs::Image>("/image_rect", 1);
-  srv_ = new dynamic_reconfigure::Server<CameraConfig>(p_nh);
-  dynamic_reconfigure::Server<CameraConfig>::CallbackType cb = boost::bind(&HKCameraNodelet::reconfigCB, this, _1, _2);
-  srv_->setCallback(cb);
-  if (enable_imu_trigger_)
+void HKCameraNodelet::timerCallback(const ros::TimerEvent&) {
+  MV_CC_DEVICE_INFO_LIST stDeviceList;
+  memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
+  try
   {
-    imu_trigger_client_ = nh_.serviceClient<rm_msgs::EnableImuTrigger>("imu_trigger");
-    rm_msgs::EnableImuTrigger imu_trigger_srv;
-    imu_trigger_srv.request.imu_name = imu_name_;
-    imu_trigger_srv.request.enable_trigger = true;
-    while (!imu_trigger_client_.call(imu_trigger_srv))
-    {
-      ROS_WARN("Failed to call service enable_imu_trigger. Retry now.");
-      ros::Duration(1).sleep();
-    }
-    if (imu_trigger_srv.response.is_success)
-      ROS_INFO("Enable imu %s trigger camera successfully", imu_name_.c_str());
-    else
-      ROS_ERROR("Failed to enable imu %s trigger camera", imu_name_.c_str());
-    enable_trigger_timer_ = nh_.createTimer(ros::Duration(0.5), &HKCameraNodelet::enableTriggerCB, this);
+    int nRet = MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE, &stDeviceList);
+    if (nRet != MV_OK)
+      throw(nRet);
   }
-
-  camera_change_sub = nh_.subscribe("/camera_name", 50, &hk_camera::HKCameraNodelet::cameraChange, this);
+  catch (int nRet)
+  {
+    std::cout << "MV_CC_EnumDevices fail! nRet " << std::hex << nRet << std::endl;
+    exit(-1);
+  }
+  if (stDeviceList.nDeviceNum == 0)
+    camera_restart_flag_ = true;
+  if (camera_restart_flag_ && stDeviceList.nDeviceNum > 0)
+  {
+    initializeCamera();
+    camera_restart_flag_ = false;
+  }
 }
 
 bool HKCameraNodelet::changeStatusCB(rm_msgs::StatusChange::Request& change, rm_msgs::StatusChange::Response& res)
@@ -509,14 +541,13 @@ ros::ServiceClient HKCameraNodelet::imu_trigger_client_;
 bool HKCameraNodelet::enable_imu_trigger_;
 bool HKCameraNodelet::trigger_not_sync_ = false;
 const int HKCameraNodelet::FIFO_SIZE = 1023;
-int HKCameraNodelet::count_ = 837;
 int HKCameraNodelet::fifo_front_ = 0;
 int HKCameraNodelet::fifo_rear_ = 0;
-bool HKCameraNodelet::device_open_ = true;
 bool HKCameraNodelet::take_photo_{};
 struct TriggerPacket HKCameraNodelet::fifo_[FIFO_SIZE];
 uint32_t HKCameraNodelet::receive_trigger_counter_ = 0;
 bool HKCameraNodelet::enable_resolution_ = false;
 int HKCameraNodelet::resolution_ratio_width_ = 1440;
 int HKCameraNodelet::resolution_ratio_height_ = 1080;
+bool HKCameraNodelet::camera_restart_flag_{};
 }  // namespace hk_camera
