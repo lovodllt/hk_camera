@@ -126,6 +126,19 @@ void HKCameraNodelet::onInit()
   // Print the camera serial number
   ROS_INFO("Camera Serial Number: %s", dev_sn.chCurValue);
 
+  // Retrieve and print the camera's model name using DeviceModelName
+  MVCC_STRINGVALUE model_name;
+  memset(&model_name, 0, sizeof(MVCC_STRINGVALUE));
+  int nRet = MV_CC_GetStringValue(dev_handle_, "DeviceModelName", &model_name);
+  if (nRet == MV_OK)
+  {
+    ROS_INFO("Camera Model: %s", model_name.chCurValue);
+  }
+  else
+  {
+    ROS_WARN("Failed to get camera model name. Error code: %x", nRet);
+  }
+
   MvGvspPixelType format;
   if (pixel_format_ == "mono8")
     format = PixelType_Gvsp_Mono8;
