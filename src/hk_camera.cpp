@@ -120,7 +120,11 @@ void HKCameraNodelet::onInit()
   {
     assert(MV_CC_CreateHandle(&dev_handle_, stDeviceList.pDeviceInfo[nIndex]) == MV_OK);
     assert(MV_CC_OpenDevice(dev_handle_) == MV_OK);
+    MV_CC_GetStringValue(dev_handle_, "DeviceSerialNumber", &dev_sn);
   }
+
+  // Print the camera serial number
+  ROS_INFO("Camera Serial Number: %s", dev_sn.chCurValue);
 
   MvGvspPixelType format;
   if (pixel_format_ == "mono8")
