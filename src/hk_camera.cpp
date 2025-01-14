@@ -45,7 +45,7 @@ void HKCameraNodelet::onInit()
   nh_.param("exposure_auto", exposure_auto_, true);
   nh_.param("exposure_value", exposure_value_, 20.0);
   nh_.param("exposure_max", exposure_max_, 3000.0);
-  nh_.param("exposure_min", exposure_min_, 20.0);
+  nh_.param("exposure_min", exposure_min_, 50.0);
   nh_.param("white_auto", white_auto_, true);
   nh_.param("white_selector", white_selector_, 0);
   nh_.param("enable_resolution", enable_resolution_, false);
@@ -120,7 +120,11 @@ void HKCameraNodelet::onInit()
   {
     assert(MV_CC_CreateHandle(&dev_handle_, stDeviceList.pDeviceInfo[nIndex]) == MV_OK);
     assert(MV_CC_OpenDevice(dev_handle_) == MV_OK);
+    MV_CC_GetStringValue(dev_handle_, "DeviceSerialNumber", &dev_sn);
   }
+
+  // Print the camera serial number
+  ROS_INFO("Camera Serial Number: %s", dev_sn.chCurValue);
 
   MvGvspPixelType format;
   if (pixel_format_ == "mono8")
@@ -394,7 +398,8 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   if (config.exposure_auto)
   {
     _MVCC_FLOATVALUE_T exposure_time;
-    assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min) == MV_OK);
+//    assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min) == MV_OK);
+    MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeLowerLimit", config.exposure_min);
     assert(MV_CC_SetIntValue(dev_handle_, "AutoExposureTimeUpperLimit", config.exposure_max) == MV_OK);
     assert(MV_CC_SetEnumValue(dev_handle_, "ExposureAuto", MV_EXPOSURE_AUTO_MODE_CONTINUOUS) == MV_OK);
     assert(MV_CC_GetFloatValue(dev_handle_, "ExposureTime", &exposure_time) == MV_OK);
@@ -468,6 +473,7 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
       break;
     case 2:
       assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
+//      MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false);
       break;
   }
 
