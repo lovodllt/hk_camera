@@ -18,6 +18,7 @@ rosrun camera_calibration cameracalibrator.py --size 11x8 --square 0.020 image:=
 ```
 
 -  size：the size of the inner corners of the chessboard.
+-  size:是内部角点的数量，不是棋盘格的格子数
 
 - square：the length of each square (unit：m).
 
