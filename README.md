@@ -10,6 +10,13 @@ then extract `MVS-2.1.1_x86_64_20220511.tar.gz` and decompress it.
 - In the catalogue of which you decompressed, run `sudo ./setup.sh`.
 - Then run `sudo cp /opt/MVS/lib/64/libMvCameraControl.so /usr/lib`.
 
+# 跑hk没有compressed话题
+
+```shell
+sudo apt-get update
+sudo apt-get install ros-noetic-image-transport-plugins
+```
+重新跑即可
 
 # Calibrate
 
