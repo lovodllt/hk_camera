@@ -485,8 +485,14 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
       assert(MV_CC_SetGamma(dev_handle_, config.gamma_value) == MV_OK);
       break;
     case 2:
-      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
-//      MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false);
+//      assert(MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false) == MV_OK);
+      MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false);
+      auto gamma_status = MV_CC_SetBoolValue(dev_handle_, "GammaEnable", false);
+//      if (gamma_status != MV_OK) {
+//        NODELET_ERROR("Failed to set GammaEnable: %d", gamma_status);
+//      } else {
+//        NODELET_INFO("Successfully set GammaEnable");
+//      }
       break;
   }
 
