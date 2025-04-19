@@ -37,7 +37,8 @@ include_directories(
 
 add_library(hk_camera
         src/hk_camera.cpp
-        )
+        src/hk_camera_node.cpp
+)
 
 
 target_link_libraries(hk_camera
