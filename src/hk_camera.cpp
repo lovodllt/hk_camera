@@ -14,7 +14,7 @@
 namespace hk_camera
 {
 PLUGINLIB_EXPORT_CLASS(hk_camera::HKCameraNodelet, nodelet::Nodelet)
-HKCameraNodelet::HKCameraNodelet()
+HKCameraNodelet::HKCameraNodelet() : d_nh_(), d_it_(d_nh_)
 {
 }
 
@@ -542,6 +542,19 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   }
 
   take_photo_ = config.take_photo;
+
+  is_fps_down_ = config.is_fps_down;
+  if (is_fps_down_)
+  {
+    ROS_WARN("Fps down mode is on.");
+    FpsDown();
+  }
+  else
+  {
+    ROS_WARN("Fps down mode is off.");
+    d_sub_.shutdown();
+    d_pub_.shutdown();
+  }
   //  Width offset of image
   //  width_ = config.width_offset;
 }
@@ -575,4 +588,25 @@ bool HKCameraNodelet::enable_resolution_ = false;
 int HKCameraNodelet::resolution_ratio_width_ = 1440;
 int HKCameraNodelet::resolution_ratio_height_ = 1080;
 bool HKCameraNodelet::camera_restart_flag_{};
+
+void HKCameraNodelet::FpsDown()
+{
+  d_sub_ = d_it_.subscribe("/hk_camera/image_raw", 10, &HKCameraNodelet::imageCallback, this);
+  d_pub_ = d_it_.advertise("/hk_camera/image_raw_down", 10);
+  target_fps_ = 40;
+  last_pub_time_ = ros::Time::now();
+}
+
+void HKCameraNodelet::imageCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+  ros::Time current_time = ros::Time::now();
+  double elapsed_time = (current_time - last_pub_time_).toSec();
+  double target_interval = 1.0 / target_fps_;
+  if (elapsed_time >= target_interval)
+  {
+    d_pub_.publish(msg);
+    last_pub_time_ = current_time;
+  }
+}
+
 }  // namespace hk_camera
