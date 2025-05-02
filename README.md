@@ -8,8 +8,9 @@ Dependencies:
 https://www.hikrobotics.com/cn/machinevision/service/download?module=0 and install,
 then extract `MVS-2.1.1_x86_64_20220511.tar.gz` and decompress it.
 - In the catalogue of which you decompressed, run `sudo ./setup.sh`.
+  - 24年的驱动用`sudo bash setup.bash`
 - Then run `sudo cp /opt/MVS/lib/64/libMvCameraControl.so /usr/lib`.
-
+Turn
 # 跑hk没有compressed话题
 
 ```shell
@@ -41,7 +42,7 @@ Tips:
 4. cd进/tmp，将标定文件传进小电脑的/.ros/camera_info/中
 ```shell
 cd /tmp/calibrationdata
-scp xxxx.yaml dynamicx@192.168.100.2:/home/dyanmicx/.ros/camera_info/
+scp xxxx.yaml dynamicx@192.168.100.2:/home/dynamicx/.ros/camera_info/
 ```
 
 5. 修改参数文件

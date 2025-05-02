@@ -546,12 +546,12 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   is_fps_down_ = config.is_fps_down;
   if (is_fps_down_)
   {
-    ROS_WARN("Fps down mode is on.");
+    ROS_INFO("Fps down mode is on.");
     FpsDown();
   }
   else
   {
-    ROS_WARN("Fps down mode is off.");
+    ROS_INFO("Fps down mode is off.");
     d_sub_.shutdown();
     d_pub_.shutdown();
   }
