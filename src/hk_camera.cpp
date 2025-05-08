@@ -23,6 +23,7 @@ void HKCameraNodelet::onInit()
   nh_ = this->getPrivateNodeHandle();
   image_transport::ImageTransport it(nh_);
   pub_ = it.advertiseCamera("image_raw", 1);
+  camera_raw_ = pub_.getTopic();
   this->status_change_srv_ = nh_.advertiseService("/exposure_status_switch", &HKCameraNodelet::changeStatusCB, this);
 
   nh_.param("camera_frame_id", image_.header.frame_id, std::string("camera_optical_frame"));
@@ -53,6 +54,7 @@ void HKCameraNodelet::onInit()
   nh_.param("resolution_ratio_width", resolution_ratio_width_, 1440);
   nh_.param("resolution_ratio_height", resolution_ratio_height_, 1080);
   nh_.param("stop_grab", stop_grab_, false);
+  nh_.param("is_fps_down", is_fps_down_, false);
 
   info_manager_.reset(new camera_info_manager::CameraInfoManager(nh_, camera_name_, camera_info_url_));
 
@@ -591,7 +593,7 @@ bool HKCameraNodelet::camera_restart_flag_{};
 
 void HKCameraNodelet::FpsDown()
 {
-  d_sub_ = d_it_.subscribe("/hk_camera/image_raw", 10, &HKCameraNodelet::imageCallback, this);
+  d_sub_ = d_it_.subscribe(camera_raw_, 10, &HKCameraNodelet::imageCallback, this);
   d_pub_ = d_it_.advertise("/hk_camera/image_raw_down", 10);
   target_fps_ = 40;
   last_pub_time_ = ros::Time::now();

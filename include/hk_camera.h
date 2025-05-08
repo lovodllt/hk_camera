@@ -106,6 +106,7 @@ private:
   image_transport::ImageTransport d_it_;
   image_transport::Publisher d_pub_;
   image_transport::Subscriber d_sub_;
+  std::string camera_raw_;
   double target_fps_;
   ros::Time last_pub_time_;
   bool is_fps_down_;
