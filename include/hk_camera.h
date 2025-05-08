@@ -109,6 +109,8 @@ private:
   double target_fps_;
   ros::Time last_pub_time_;
   bool is_fps_down_;
+
+  std::string node_name_;
 };
 }  // namespace hk_camera
 

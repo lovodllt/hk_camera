@@ -21,6 +21,8 @@ HKCameraNodelet::HKCameraNodelet() : d_nh_(), d_it_(d_nh_)
 void HKCameraNodelet::onInit()
 {
   nh_ = this->getPrivateNodeHandle();
+  node_name_ = nh_.getNamespace();
+  ROS_INFO("node_name:%s",node_name_.substr(1).c_str());
   image_transport::ImageTransport it(nh_);
   pub_ = it.advertiseCamera("image_raw", 1);
   this->status_change_srv_ = nh_.advertiseService("/exposure_status_switch", &HKCameraNodelet::changeStatusCB, this);
@@ -261,7 +263,7 @@ bool HKCameraNodelet::changeStatusCB(rm_msgs::StatusChange::Request& change, rm_
 
 void HKCameraNodelet::cameraChange(const std_msgs::String camera_change)
 {
-  if (strcmp(camera_change.data.c_str(), "hk_camera") == 0)
+  if (strcmp(camera_change.data.c_str(), node_name_.substr(1).c_str()) == 0)
     MV_CC_StartGrabbing(dev_handle_);
   else
     MV_CC_StopGrabbing(dev_handle_);
@@ -546,12 +548,12 @@ void HKCameraNodelet::reconfigCB(CameraConfig& config, uint32_t level)
   is_fps_down_ = config.is_fps_down;
   if (is_fps_down_)
   {
-    ROS_WARN("Fps down mode is on.");
+    ROS_INFO("Fps down mode is on.");
     FpsDown();
   }
   else
   {
-    ROS_WARN("Fps down mode is off.");
+    ROS_INFO("Fps down mode is off.");
     d_sub_.shutdown();
     d_pub_.shutdown();
   }
