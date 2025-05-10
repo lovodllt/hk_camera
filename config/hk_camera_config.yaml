@@ -9,3 +9,4 @@ hk_camera:
   exposure_min: 20.0
   white_auto: false
   white_selector: 0
+  is_fps_down: false
