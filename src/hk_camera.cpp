@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <std_msgs/Bool.h>
 
 namespace hk_camera
 {
@@ -107,6 +108,7 @@ void HKCameraNodelet::onInit()
   }
 
   camera_change_sub = nh_.subscribe("/camera_name", 50, &hk_camera::HKCameraNodelet::cameraChange, this);
+  camera_stop_sub_ = nh_.subscribe("/camera_stop", 50, &hk_camera::HKCameraNodelet::cameraStop, this);
 
   timer_ = nh_.createTimer(ros::Duration(0.1), &HKCameraNodelet::timerCallback, this);
   ROS_INFO("Camera %s is ready", camera_name_.c_str());
@@ -269,6 +271,14 @@ void HKCameraNodelet::cameraChange(const std_msgs::String camera_change)
     MV_CC_StartGrabbing(dev_handle_);
   else
     MV_CC_StopGrabbing(dev_handle_);
+}
+
+void HKCameraNodelet::cameraStop(const std_msgs::Bool camera_stop_msg_)
+{
+  if (camera_stop_msg_.data == true && strcmp("camera_back", node_name_.substr(1).c_str()) == 0)
+    MV_CC_StopGrabbing(dev_handle_);
+  else
+    MV_CC_StartGrabbing(dev_handle_);
 }
 
 void HKCameraNodelet::triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref)
