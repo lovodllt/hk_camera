@@ -20,6 +20,7 @@
 #include <termios.h>
 #include <std_msgs/String.h>
 #include <rm_msgs/StatusChange.h>
+#include <std_msgs/Bool.h>
 
 namespace hk_camera
 {
@@ -48,6 +49,7 @@ private:
   void triggerCB(const sensor_msgs::TimeReference::ConstPtr& time_ref);
   void enableTriggerCB(const ros::TimerEvent&);
   void cameraChange(const std_msgs::String);
+  void cameraStop(const std_msgs::Bool);
   void initializeCamera();
   bool changeStatusCB(rm_msgs::StatusChange::Request& change, rm_msgs::StatusChange::Response& res);
   ros::ServiceServer status_change_srv_;
@@ -101,6 +103,7 @@ private:
   ros::ServiceServer imu_correspondence_service_;
   static void __stdcall onFrameCB(unsigned char* pData, MV_FRAME_OUT_INFO_EX* pFrameInfo, void* pUser);
   ros::Subscriber camera_change_sub;
+  ros::Subscriber camera_stop_sub_;
 
   ros::NodeHandle d_nh_;
   image_transport::ImageTransport d_it_;
@@ -110,6 +113,8 @@ private:
   double target_fps_;
   ros::Time last_pub_time_;
   bool is_fps_down_;
+
+  std::string node_name_;
 };
 }  // namespace hk_camera
 
